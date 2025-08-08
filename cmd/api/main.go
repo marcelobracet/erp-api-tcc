@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"erp-api/internal/delivery/http/client"
+	"erp-api/internal/delivery/http/product"
 	"erp-api/internal/delivery/http/user"
 	"erp-api/internal/infra/container"
 	"erp-api/pkg/middleware"
@@ -105,6 +107,26 @@ func setupRouter(container *container.Container) *gin.Engine {
 			users.PUT("/:id", authMiddleware.RequireRole("admin"), user.NewHandler(container.GetUserUseCase()).Update)
 			users.DELETE("/:id", authMiddleware.RequireRole("admin"), user.NewHandler(container.GetUserUseCase()).Delete)
 			users.GET("", authMiddleware.RequireRole("admin"), user.NewHandler(container.GetUserUseCase()).List)
+		}
+
+		clients := api.Group("/clients")
+		{
+			clients.POST("", authMiddleware.Authenticate(), client.NewHandler(container.GetClientUseCase()).Create)
+			clients.GET("/:id", authMiddleware.Authenticate(), client.NewHandler(container.GetClientUseCase()).GetByID)
+			clients.PUT("/:id", authMiddleware.Authenticate(), client.NewHandler(container.GetClientUseCase()).Update)
+			clients.DELETE("/:id", authMiddleware.Authenticate(), client.NewHandler(container.GetClientUseCase()).Delete)
+			clients.GET("", authMiddleware.Authenticate(), client.NewHandler(container.GetClientUseCase()).List)
+			clients.GET("/count", authMiddleware.Authenticate(), client.NewHandler(container.GetClientUseCase()).Count)
+		}
+
+		products := api.Group("/products")
+		{
+			products.POST("", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).Create)
+			products.GET("/:id", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).GetByID)
+			products.PUT("/:id", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).Update)
+			products.DELETE("/:id", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).Delete)
+			products.GET("", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).List)
+			products.GET("/count", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).Count)
 		}
 	}
 

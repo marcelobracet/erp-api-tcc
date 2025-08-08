@@ -7,8 +7,12 @@ import (
 	"os"
 	"time"
 
+	clientDomain "erp-api/internal/domain/client"
+	productDomain "erp-api/internal/domain/product"
 	userDomain "erp-api/internal/domain/user"
 	"erp-api/internal/infra/repository"
+	clientUseCase "erp-api/internal/usecase/client"
+	productUseCase "erp-api/internal/usecase/product"
 	userUseCase "erp-api/internal/usecase/user"
 	"erp-api/pkg/auth"
 
@@ -18,11 +22,15 @@ import (
 )
 
 type Container struct {
-	DB          *gorm.DB
-	UserRepo    userDomain.Repository
-	UserUseCase userUseCase.UseCaseInterface
-	JWTManager  *auth.JWTManager
-	PassHasher  *auth.PasswordHasher
+	DB            *gorm.DB
+	UserRepo      userDomain.Repository
+	UserUseCase   userUseCase.UseCaseInterface
+	ClientRepo    clientDomain.Repository
+	ClientUseCase clientUseCase.UseCaseInterface
+	ProductRepo   productDomain.Repository
+	ProductUseCase productUseCase.UseCaseInterface
+	JWTManager    *auth.JWTManager
+	PassHasher    *auth.PasswordHasher
 }
 
 func NewContainer() *Container {
@@ -113,6 +121,8 @@ func (c *Container) initializeRepositories() error {
 	}
 
 	c.UserRepo = repository.NewUserRepository(c.DB)
+	c.ClientRepo = repository.NewClientRepository(c.DB)
+	c.ProductRepo = repository.NewProductRepository(c.DB)
 	log.Println("Repositories initialized successfully")
 	return nil
 }
@@ -123,7 +133,9 @@ func (c *Container) initializeUseCases() error {
 	}
 
 	c.UserUseCase = userUseCase.NewUseCase(c.UserRepo, c.JWTManager, c.PassHasher)
-	log.Printf("Use cases initialized successfully - UserRepo: %v, JWTManager: %v, PassHasher: %v", c.UserRepo != nil, c.JWTManager != nil, c.PassHasher != nil)
+	c.ClientUseCase = clientUseCase.NewUseCase(c.ClientRepo)
+	c.ProductUseCase = productUseCase.NewUseCase(c.ProductRepo)
+	log.Printf("Use cases initialized successfully - UserRepo: %v, ClientRepo: %v, JWTManager: %v, PassHasher: %v", c.UserRepo != nil, c.ClientRepo != nil, c.JWTManager != nil, c.PassHasher != nil)
 	return nil
 }
 
@@ -177,6 +189,22 @@ func (c *Container) GetUserRepository() userDomain.Repository {
 
 func (c *Container) GetUserUseCase() userUseCase.UseCaseInterface {
 	return c.UserUseCase
+}
+
+func (c *Container) GetClientRepository() clientDomain.Repository {
+	return c.ClientRepo
+}
+
+func (c *Container) GetClientUseCase() clientUseCase.UseCaseInterface {
+	return c.ClientUseCase
+}
+
+func (c *Container) GetProductRepository() productDomain.Repository {
+	return c.ProductRepo
+}
+
+func (c *Container) GetProductUseCase() productUseCase.UseCaseInterface {
+	return c.ProductUseCase
 }
 
 func (c *Container) GetJWTManager() *auth.JWTManager {
