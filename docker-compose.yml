@@ -1,0 +1,57 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - DB_SSLMODE=disable
+      - JWT_SECRET=your-super-secret-jwt-key-here
+      - JWT_EXPIRATION=24h
+      - JWT_REFRESH_EXPIRATION=168h
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    volumes:
+      - ./migrations:/app/migrations
+    networks:
+      - erp-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=erp_user
+      - POSTGRES_PASSWORD=erp_password
+      - POSTGRES_DB=erp_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - erp-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@erp.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - erp-network
+
+volumes:
+  postgres_data:
+
+networks:
+  erp-network:
+    driver: bridge

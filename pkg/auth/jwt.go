@@ -8,7 +8,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Claims representa as claims do JWT
 type Claims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
@@ -100,7 +99,6 @@ func (j *JWTManager) RefreshAccessToken(refreshToken string) (string, error) {
 	return j.GenerateAccessToken(claims.UserID, claims.Email, claims.Role)
 }
 
-// TokenPair representa um par de tokens (access + refresh)
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`

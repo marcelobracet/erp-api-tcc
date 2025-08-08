@@ -69,8 +69,39 @@ lint:
 
 migrate:
 	@echo "Running database migrations..."
-	# TODO: Add migration commands
+	@docker-compose exec postgres psql -U erp_user -d erp_db -f /docker-entrypoint-initdb.d/001_create_users_table.sql
 
 seed:
 	@echo "Seeding database..."
-	# TODO: Add seed commands 
+	@echo "Seed commands to be implemented"
+
+db-setup:
+	@echo "Setting up database..."
+	@docker-compose up -d postgres
+	@echo "Waiting for PostgreSQL to be ready..."
+	@sleep 10
+	@echo "Database setup complete"
+
+dev-setup: deps build db-setup
+	@echo "Development environment setup complete"
+
+dev: dev-setup
+	@echo "Starting development environment..."
+	@docker-compose up
+
+dev-stop:
+	@echo "Stopping development environment..."
+	@docker-compose down
+
+logs:
+	@echo "Showing logs..."
+	@docker-compose logs -f
+
+db-connect:
+	@echo "Connecting to PostgreSQL..."
+	@docker-compose exec postgres psql -U erp_user -d erp_db
+
+pgadmin:
+	@echo "PgAdmin available at http://localhost:5050"
+	@echo "Email: admin@erp.com"
+	@echo "Password: admin123" 
