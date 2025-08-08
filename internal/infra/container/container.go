@@ -9,10 +9,14 @@ import (
 
 	clientDomain "erp-api/internal/domain/client"
 	productDomain "erp-api/internal/domain/product"
+	quoteDomain "erp-api/internal/domain/quote"
+	settingsDomain "erp-api/internal/domain/settings"
 	userDomain "erp-api/internal/domain/user"
 	"erp-api/internal/infra/repository"
 	clientUseCase "erp-api/internal/usecase/client"
 	productUseCase "erp-api/internal/usecase/product"
+	quoteUseCase "erp-api/internal/usecase/quote"
+	settingsUseCase "erp-api/internal/usecase/settings"
 	userUseCase "erp-api/internal/usecase/user"
 	"erp-api/pkg/auth"
 
@@ -22,15 +26,20 @@ import (
 )
 
 type Container struct {
-	DB            *gorm.DB
-	UserRepo      userDomain.Repository
-	UserUseCase   userUseCase.UseCaseInterface
-	ClientRepo    clientDomain.Repository
-	ClientUseCase clientUseCase.UseCaseInterface
-	ProductRepo   productDomain.Repository
+	DB             *gorm.DB
+	UserRepo       userDomain.Repository
+	UserUseCase    userUseCase.UseCaseInterface
+	ClientRepo     clientDomain.Repository
+	ClientUseCase  clientUseCase.UseCaseInterface
+	ProductRepo    productDomain.Repository
 	ProductUseCase productUseCase.UseCaseInterface
-	JWTManager    *auth.JWTManager
-	PassHasher    *auth.PasswordHasher
+	QuoteRepo      quoteDomain.Repository
+	QuoteItemRepo  quoteDomain.ItemRepository
+	QuoteUseCase   quoteUseCase.UseCaseInterface
+	SettingsRepo   settingsDomain.Repository
+	SettingsUseCase settingsUseCase.UseCaseInterface
+	JWTManager     *auth.JWTManager
+	PassHasher     *auth.PasswordHasher
 }
 
 func NewContainer() *Container {
@@ -123,6 +132,9 @@ func (c *Container) initializeRepositories() error {
 	c.UserRepo = repository.NewUserRepository(c.DB)
 	c.ClientRepo = repository.NewClientRepository(c.DB)
 	c.ProductRepo = repository.NewProductRepository(c.DB)
+	c.QuoteRepo = repository.NewQuoteRepository(c.DB)
+	c.QuoteItemRepo = repository.NewQuoteItemRepository(c.DB)
+	c.SettingsRepo = repository.NewSettingsRepository(c.DB)
 	log.Println("Repositories initialized successfully")
 	return nil
 }
@@ -135,7 +147,10 @@ func (c *Container) initializeUseCases() error {
 	c.UserUseCase = userUseCase.NewUseCase(c.UserRepo, c.JWTManager, c.PassHasher)
 	c.ClientUseCase = clientUseCase.NewUseCase(c.ClientRepo)
 	c.ProductUseCase = productUseCase.NewUseCase(c.ProductRepo)
-	log.Printf("Use cases initialized successfully - UserRepo: %v, ClientRepo: %v, JWTManager: %v, PassHasher: %v", c.UserRepo != nil, c.ClientRepo != nil, c.JWTManager != nil, c.PassHasher != nil)
+	c.QuoteUseCase = quoteUseCase.NewUseCase(c.QuoteRepo, c.QuoteItemRepo)
+	c.SettingsUseCase = settingsUseCase.NewUseCase(c.SettingsRepo)
+	log.Printf("Use cases initialized successfully - UserRepo: %v, ClientRepo: %v, ProductRepo: %v, QuoteRepo: %v, SettingsRepo: %v, JWTManager: %v, PassHasher: %v", 
+		c.UserRepo != nil, c.ClientRepo != nil, c.ProductRepo != nil, c.QuoteRepo != nil, c.SettingsRepo != nil, c.JWTManager != nil, c.PassHasher != nil)
 	return nil
 }
 
@@ -205,6 +220,26 @@ func (c *Container) GetProductRepository() productDomain.Repository {
 
 func (c *Container) GetProductUseCase() productUseCase.UseCaseInterface {
 	return c.ProductUseCase
+}
+
+func (c *Container) GetQuoteRepository() quoteDomain.Repository {
+	return c.QuoteRepo
+}
+
+func (c *Container) GetQuoteItemRepository() quoteDomain.ItemRepository {
+	return c.QuoteItemRepo
+}
+
+func (c *Container) GetQuoteUseCase() quoteUseCase.UseCaseInterface {
+	return c.QuoteUseCase
+}
+
+func (c *Container) GetSettingsRepository() settingsDomain.Repository {
+	return c.SettingsRepo
+}
+
+func (c *Container) GetSettingsUseCase() settingsUseCase.UseCaseInterface {
+	return c.SettingsUseCase
 }
 
 func (c *Container) GetJWTManager() *auth.JWTManager {

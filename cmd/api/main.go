@@ -11,6 +11,8 @@ import (
 
 	"erp-api/internal/delivery/http/client"
 	"erp-api/internal/delivery/http/product"
+	"erp-api/internal/delivery/http/quote"
+	settingsHandler "erp-api/internal/delivery/http/settings"
 	"erp-api/internal/delivery/http/user"
 	"erp-api/internal/infra/container"
 	"erp-api/pkg/middleware"
@@ -127,6 +129,23 @@ func setupRouter(container *container.Container) *gin.Engine {
 			products.DELETE("/:id", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).Delete)
 			products.GET("", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).List)
 			products.GET("/count", authMiddleware.Authenticate(), product.NewHandler(container.GetProductUseCase()).Count)
+		}
+
+		quotes := api.Group("/quotes")
+		{
+			quotes.POST("", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).Create)
+			quotes.GET("/:id", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).GetByID)
+			quotes.PUT("/:id", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).Update)
+			quotes.DELETE("/:id", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).Delete)
+			quotes.GET("", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).List)
+			quotes.GET("/count", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).Count)
+			quotes.PUT("/:id/status", authMiddleware.Authenticate(), quote.NewHandler(container.GetQuoteUseCase()).UpdateStatus)
+		}
+
+		settings := api.Group("/settings")
+		{
+			settings.GET("", authMiddleware.Authenticate(), settingsHandler.NewHandler(container.GetSettingsUseCase()).Get)
+			settings.PUT("", authMiddleware.Authenticate(), settingsHandler.NewHandler(container.GetSettingsUseCase()).Update)
 		}
 	}
 
