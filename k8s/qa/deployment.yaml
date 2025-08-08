@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-api-qa
+  namespace: qa
+  labels:
+    app: erp-api
+    environment: qa
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: erp-api
+      environment: qa
+  template:
+    metadata:
+      labels:
+        app: erp-api
+        environment: qa
+    spec:
+      containers:
+        - name: erp-api
+          image: ghcr.io/your-username/erp-api:develop
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: "postgres-qa"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: erp-db-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-db-secret
+                  key: password
+            - name: DB_NAME
+              value: "erp_db_qa"
+            - name: DB_SSLMODE
+              value: "disable"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: erp-jwt-secret
+                  key: secret
+            - name: JWT_EXPIRATION
+              value: "24h"
+            - name: JWT_REFRESH_EXPIRATION
+              value: "168h"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: LOG_LEVEL
+              value: "info"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      imagePullSecrets:
+        - name: ghcr-secret

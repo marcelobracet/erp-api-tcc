@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-api-prod
+  namespace: production
+  labels:
+    app: erp-api
+    environment: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: erp-api
+      environment: production
+  template:
+    metadata:
+      labels:
+        app: erp-api
+        environment: production
+    spec:
+      containers:
+        - name: erp-api
+          image: ghcr.io/your-username/erp-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: "postgres-prod"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: erp-db-secret-prod
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: erp-db-secret-prod
+                  key: password
+            - name: DB_NAME
+              value: "erp_db_prod"
+            - name: DB_SSLMODE
+              value: "require"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: erp-jwt-secret-prod
+                  key: secret
+            - name: JWT_EXPIRATION
+              value: "24h"
+            - name: JWT_REFRESH_EXPIRATION
+              value: "168h"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: LOG_LEVEL
+              value: "warn"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      imagePullSecrets:
+        - name: ghcr-secret

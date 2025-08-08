@@ -104,4 +104,53 @@ db-connect:
 pgadmin:
 	@echo "PgAdmin available at http://localhost:5050"
 	@echo "Email: admin@erp.com"
-	@echo "Password: admin123" 
+	@echo "Password: admin123"
+
+# Security and validation
+security-scan:
+	@echo "Running security scan..."
+	@gosec ./...
+
+validate: lint security-scan test
+	@echo "All validations passed!"
+
+# CI/CD commands
+ci-test: deps test security-scan
+	@echo "CI tests completed"
+
+ci-build: deps build
+	@echo "CI build completed"
+
+# Deployment commands
+deploy-qa:
+	@echo "Deploying to QA environment..."
+	@chmod +x scripts/deploy-qa.sh
+	@./scripts/deploy-qa.sh
+
+deploy-prod:
+	@echo "Deploying to Production environment..."
+	@chmod +x scripts/deploy-prod.sh
+	@./scripts/deploy-prod.sh
+
+# Release management
+create-release:
+	@echo "Creating new release..."
+	@git tag -a v$(shell date +%Y%m%d.%H%M) -m "Release $(shell date +%Y-%m-%d)"
+	@git push --tags
+
+# Kubernetes commands
+k8s-apply-qa:
+	@echo "Applying QA Kubernetes configurations..."
+	@kubectl apply -f k8s/qa/ -n qa
+
+k8s-apply-prod:
+	@echo "Applying Production Kubernetes configurations..."
+	@kubectl apply -f k8s/prod/ -n production
+
+k8s-status-qa:
+	@echo "QA Environment Status:"
+	@kubectl get pods,svc,ing -n qa
+
+k8s-status-prod:
+	@echo "Production Environment Status:"
+	@kubectl get pods,svc,ing -n production 

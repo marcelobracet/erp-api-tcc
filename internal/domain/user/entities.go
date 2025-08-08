@@ -1,17 +1,22 @@
 package user
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
-	ID           string    `json:"id"`
-	Email        string    `json:"email"`
-	Password     string    `json:"-"`
-	Name         string    `json:"name"`
-	Role         string    `json:"role"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+	ID           string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Email        string         `json:"email" gorm:"uniqueIndex;not null"`
+	Password     string         `json:"-" gorm:"not null"`
+	Name         string         `json:"name" gorm:"not null"`
+	Role         string         `json:"role" gorm:"not null;check:role IN ('admin', 'user', 'manager')"`
+	IsActive     bool           `json:"is_active" gorm:"default:true"`
+	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
+	LastLoginAt  *time.Time     `json:"last_login_at,omitempty"`
+	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 type CreateUserRequest struct {
