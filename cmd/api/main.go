@@ -12,6 +12,7 @@ import (
 	"erp-api/internal/delivery/http/client"
 	"erp-api/internal/delivery/http/product"
 	"erp-api/internal/delivery/http/quote"
+	"erp-api/internal/delivery/http/reports"
 	settingsHandler "erp-api/internal/delivery/http/settings"
 	"erp-api/internal/delivery/http/user"
 	"erp-api/internal/infra/container"
@@ -147,6 +148,11 @@ func setupRouter(container *container.Container) *gin.Engine {
 			settings.GET("", authMiddleware.Authenticate(), settingsHandler.NewHandler(container.GetSettingsUseCase()).Get)
 			settings.PUT("", authMiddleware.Authenticate(), settingsHandler.NewHandler(container.GetSettingsUseCase()).Update)
 		}
+
+		reportsGroup := api.Group("/reports")
+		{
+			reportsGroup.GET("/export", reports.NewHandler(container.GetProductUseCase()).Export)
+		}
 	}
 
 	router.GET("/health", func(c *gin.Context) {
@@ -157,4 +163,4 @@ func setupRouter(container *container.Container) *gin.Engine {
 	})
 
 	return router
-} 
+}
