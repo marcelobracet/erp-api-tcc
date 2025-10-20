@@ -192,23 +192,22 @@ func TestUser_Struct(t *testing.T) {
 		IsActive:    true,
 		CreatedAt:   now,
 		UpdatedAt:   now,
-		LastLoginAt: &now,
 	}
-
-	// Test basic fields
-	if user.ID != "user-123" {
-		t.Errorf("Expected ID 'user-123', got '%s'", user.ID)
+	
+	userDTO := user.ToDTO()
+	if userDTO.ID != "user-123" {
+		t.Errorf("Expected ID 'user-123', got '%s'", userDTO.ID)
 	}
-	if user.Email != "test@example.com" {
-		t.Errorf("Expected Email 'test@example.com', got '%s'", user.Email)
+	if userDTO.Email != "test@example.com" {
+		t.Errorf("Expected Email 'test@example.com', got '%s'", userDTO.Email)
 	}
-	if user.Name != "Test User" {
-		t.Errorf("Expected Name 'Test User', got '%s'", user.Name)
+	if userDTO.Name != "Test User" {
+		t.Errorf("Expected Name 'Test User', got '%s'", userDTO.Name)
 	}
-	if user.Role != "user" {
-		t.Errorf("Expected Role 'user', got '%s'", user.Role)
+	if userDTO.Role != "user" {
+		t.Errorf("Expected Role 'user', got '%s'", userDTO.Role)
 	}
-	if !user.IsActive {
+	if !userDTO.IsActive {
 		t.Error("Expected IsActive to be true")
 	}
 } 

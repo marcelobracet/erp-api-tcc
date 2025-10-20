@@ -92,7 +92,7 @@ func (m *MockRepository) UpdateLastLogin(ctx context.Context, id string) error {
 		return userDomain.ErrUserNotFound
 	}
 	now := time.Now()
-	user.LastLoginAt = &now
+	user.ToDTO().LastLoginAt = now.Format(time.RFC3339)
 	user.UpdatedAt = now
 	return nil
 }

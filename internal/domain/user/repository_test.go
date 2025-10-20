@@ -91,7 +91,7 @@ func (m *MockRepository) UpdateLastLogin(ctx context.Context, id string) error {
 		return ErrUserNotFound
 	}
 	now := time.Now()
-	user.LastLoginAt = &now
+	user.ToDTO().LastLoginAt = now.Format(time.RFC3339)
 	user.UpdatedAt = now
 	return nil
 }
@@ -381,7 +381,7 @@ func TestMockRepository_UpdateLastLogin(t *testing.T) {
 		t.Errorf("GetByID() error = %v", err)
 	}
 	
-	if found.LastLoginAt == nil {
+	if found.ToDTO().LastLoginAt == "" {
 		t.Error("Expected LastLoginAt to be set")
 	}
 } 

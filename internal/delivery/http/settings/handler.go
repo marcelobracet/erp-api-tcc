@@ -19,7 +19,6 @@ func NewHandler(settingsUseCase settingsUseCase.UseCaseInterface) *Handler {
 	}
 }
 
-// Get obtém as configurações da empresa
 func (h *Handler) Get(c *gin.Context) {
 	tenantID := c.Query("tenant_id")
 	if tenantID == "" {
@@ -47,7 +46,6 @@ func (h *Handler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, settings)
 }
 
-// Update atualiza as configurações da empresa
 func (h *Handler) Update(c *gin.Context) {
 	var req settingsDomain.UpdateSettingsDTO
 	
