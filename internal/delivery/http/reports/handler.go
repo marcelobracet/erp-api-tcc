@@ -82,11 +82,14 @@ func (h *Handler) buildProductListDTO(c *gin.Context, limit, offset int) (*produ
 	for i, p := range products {
 		resp.Products[i] = &productDomain.ProductDTO{
 			ID:          p.ID,
+			TenantID:    p.TenantID,
 			Name:        p.Name,
 			Description: p.Description,
-			Type:        p.Type,
 			Price:       p.Price,
-			Unit:        p.Unit,
+			Stock:       p.Stock,
+			SKU:         p.SKU,
+			Category:    p.Category,
+			ImageURL:    p.ImageURL,
 			IsActive:    p.IsActive,
 			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:   p.UpdatedAt.Format(time.RFC3339),
@@ -120,8 +123,8 @@ func (h *Handler) exportPDF(c *gin.Context, data *productDomain.ProductListDTO) 
 		row := []string{
 			p.ID,
 			p.Name,
-			p.Type,
-			p.Unit,
+			p.Category,
+			p.SKU,
 			fmt.Sprintf("R$ %.2f", p.Price),
 			boolToStr(p.IsActive),
 			p.CreatedAt,
@@ -165,8 +168,8 @@ func (h *Handler) exportExcel(c *gin.Context, data *productDomain.ProductListDTO
 		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), p.ID)
 		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), p.Name)
 		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), p.Description)
-		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), p.Type)
-		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), p.Unit)
+		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), p.Category)
+		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), p.SKU)
 		f.SetCellValue(sheet, fmt.Sprintf("F%d", row), p.Price)
 		f.SetCellValue(sheet, fmt.Sprintf("G%d", row), p.IsActive)
 		f.SetCellValue(sheet, fmt.Sprintf("H%d", row), p.CreatedAt)

@@ -1,29 +1,37 @@
 package product
 
 type CreateProductDTO struct {
+	TenantID    string  `json:"tenant_id" binding:"required"`
 	Name        string  `json:"name" binding:"required"`
-	Description string  `json:"description" binding:"required"`
-	Type        string  `json:"type" binding:"required"`
+	Description string  `json:"description,omitempty"`
 	Price       float64 `json:"price" binding:"required"`
-	Unit        string  `json:"unit" binding:"required"`
+	Stock       int     `json:"stock,omitempty"`
+	SKU         string  `json:"sku,omitempty"`
+	Category    string  `json:"category,omitempty"`
+	ImageURL    string  `json:"image_url,omitempty"`
 }
 
 type UpdateProductDTO struct {
 	Name        string  `json:"name,omitempty"`
 	Description string  `json:"description,omitempty"`
-	Type        string  `json:"type,omitempty"`
 	Price       *float64 `json:"price,omitempty"`
-	Unit        string  `json:"unit,omitempty"`
+	Stock       *int    `json:"stock,omitempty"`
+	SKU         string  `json:"sku,omitempty"`
+	Category    string  `json:"category,omitempty"`
+	ImageURL    string  `json:"image_url,omitempty"`
 	IsActive    *bool   `json:"is_active,omitempty"`
 }
 
 type ProductDTO struct {
 	ID          string  `json:"id"`
+	TenantID    string  `json:"tenant_id"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
-	Type        string  `json:"type"`
 	Price       float64 `json:"price"`
-	Unit        string  `json:"unit"`
+	Stock       int     `json:"stock"`
+	SKU         string  `json:"sku"`
+	Category    string  `json:"category"`
+	ImageURL    string  `json:"image_url"`
 	IsActive    bool    `json:"is_active"`
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at"`

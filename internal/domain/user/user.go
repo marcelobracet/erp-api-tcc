@@ -12,6 +12,9 @@ var (
 )
 
 func (req *CreateUserRequest) ValidateCreate() error {
+	if req.TenantID == "" {
+		return errors.New("tenant_id is required")
+	}
 	if req.Email == "" {
 		return errors.New("email is required")
 	}

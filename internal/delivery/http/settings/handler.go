@@ -21,7 +21,15 @@ func NewHandler(settingsUseCase settingsUseCase.UseCaseInterface) *Handler {
 
 // Get obtém as configurações da empresa
 func (h *Handler) Get(c *gin.Context) {
-	settings, err := h.settingsUseCase.Get(c.Request.Context())
+	tenantID := c.Query("tenant_id")
+	if tenantID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "tenant_id is required",
+		})
+		return
+	}
+
+	settings, err := h.settingsUseCase.Get(c.Request.Context(), tenantID)
 	if err != nil {
 		switch err {
 		case settingsDomain.ErrSettingsNotFound:

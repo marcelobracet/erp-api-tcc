@@ -16,14 +16,8 @@ func (req *CreateQuoteDTO) Validate() error {
 	if req.ClientID == "" {
 		return errors.New("client_id is required")
 	}
-	if req.Date.IsZero() {
-		return errors.New("date is required")
-	}
-	if req.ValidUntil.IsZero() {
-		return errors.New("valid_until is required")
-	}
-	if req.ValidUntil.Before(req.Date) {
-		return errors.New("valid_until must be after date")
+	if req.UserID == "" {
+		return errors.New("user_id is required")
 	}
 	if len(req.Items) == 0 {
 		return ErrInvalidItems

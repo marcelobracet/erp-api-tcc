@@ -5,8 +5,6 @@ import (
 	"time"
 
 	clientDomain "erp-api/internal/domain/client"
-
-	"github.com/google/uuid"
 )
 
 type UseCaseInterface interface {
@@ -45,7 +43,7 @@ func (u *UseCase) Create(ctx context.Context, req *clientDomain.CreateClientDTO)
 
 	// Criar cliente
 	newClient := &clientDomain.Client{
-		ID:           uuid.New().String(),
+		TenantID:     req.TenantID,
 		Name:         req.Name,
 		Email:        req.Email,
 		Phone:        req.Phone,

@@ -3,6 +3,6 @@ package settings
 import "context"
 
 type Repository interface {
-	Get(ctx context.Context) (*Settings, error)
-	Update(ctx context.Context, settings *Settings) error
+	Get(ctx context.Context, tenantID string) (map[string]string, error)
+	Update(ctx context.Context, req *UpdateSettingsDTO) error
 } 

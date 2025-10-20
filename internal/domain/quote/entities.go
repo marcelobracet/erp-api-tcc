@@ -9,55 +9,35 @@ import (
 type QuoteStatus string
 
 const (
-	QuoteStatusPending   QuoteStatus = "Pending"
-	QuoteStatusApproved  QuoteStatus = "Approved"
-	QuoteStatusRejected  QuoteStatus = "Rejected"
-	QuoteStatusCancelled QuoteStatus = "Cancelled"
+	QuoteStatusPending   QuoteStatus = "pending"
+	QuoteStatusApproved  QuoteStatus = "approved"
+	QuoteStatusRejected  QuoteStatus = "rejected"
+	QuoteStatusCancelled QuoteStatus = "cancelled"
 )
 
 type Quote struct {
-	ID          string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	Number      string         `json:"number" gorm:"unique;not null"` // ORC-2025-0001
-	ClientID    string         `json:"client_id" gorm:"not null"`
-	Client      *Client        `json:"client,omitempty"`
-	Subtotal    float64        `json:"subtotal" gorm:"not null"`
-	Discount    float64        `json:"discount" gorm:"default:0"`
-	Taxes       float64        `json:"taxes" gorm:"default:0"`
-	TotalValue  float64        `json:"total_value" gorm:"not null"`
-	Status      QuoteStatus    `json:"status" gorm:"not null;default:'Pendente'"`
-	Date        time.Time      `json:"date" gorm:"not null"`
-	ValidUntil  time.Time      `json:"valid_until" gorm:"not null"`
-	Notes       string         `json:"notes,omitempty"`
-	IsActive    bool           `json:"is_active" gorm:"default:true"`
-	CreatedBy   string         `json:"created_by"`
-	ApprovedBy  string         `json:"approved_by,omitempty"`
-	CreatedAt   time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	ID             string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TenantID       string         `json:"tenant_id" gorm:"not null"`
+	ClientID       string         `json:"client_id" gorm:"not null"`
+	UserID         string         `json:"user_id" gorm:"not null"`
+	TotalValue     float64        `json:"total_value" gorm:"default:0"`
+	Discount       float64        `json:"discount" gorm:"default:0"`
+	Status         QuoteStatus    `json:"status" gorm:"default:'pending'"`
+	ConversionRate *float64       `json:"conversion_rate,omitempty"`
+	Notes          string         `json:"notes,omitempty"`
+	CreatedAt      time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt      time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 type QuoteItem struct {
-	ID         string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	QuoteID    string         `json:"quote_id" gorm:"not null"`
-	ProductID  string         `json:"product_id" gorm:"not null"`
-	Product    *Product       `json:"product,omitempty"`
-	Quantity   float64        `json:"quantity" gorm:"not null"`
-	UnitPrice  float64        `json:"unit_price" gorm:"not null"`
-	TotalPrice float64        `json:"total_price" gorm:"not null"`
-	CreatedAt  time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt  time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
+	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TenantID  string    `json:"tenant_id" gorm:"not null"`
+	QuoteID   string    `json:"quote_id" gorm:"not null"`
+	ProductID string    `json:"product_id" gorm:"not null"`
+	Quantity  int       `json:"quantity" gorm:"not null;default:1"`
+	Price     float64   `json:"price" gorm:"not null"`
+	Total     float64   `json:"total" gorm:"->;column:total"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
-
-type Client struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type Product struct {
-	ID   string  `json:"id"`
-	Name string  `json:"name"`
-	Type string  `json:"type"`
-	Price float64 `json:"price"`
-	Unit string  `json:"unit"`
-} 

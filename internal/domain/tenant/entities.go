@@ -1,14 +1,14 @@
-package settings
+package tenant
 
 import (
 	"time"
 )
 
-type Settings struct {
+type Tenant struct {
 	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID  string    `json:"tenant_id" gorm:"not null"`
-	Key       string    `json:"key" gorm:"not null"`
-	Value     string    `json:"value,omitempty"`
+	Name      string    `json:"name" gorm:"not null"`
+	Plan      string    `json:"plan" gorm:"default:'free'"`
+	IsActive  bool      `json:"is_active" gorm:"default:true"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }

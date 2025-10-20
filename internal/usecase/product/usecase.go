@@ -5,8 +5,6 @@ import (
 	"time"
 
 	productDomain "erp-api/internal/domain/product"
-
-	"github.com/google/uuid"
 )
 
 type UseCaseInterface interface {
@@ -35,12 +33,14 @@ func (u *UseCase) Create(ctx context.Context, req *productDomain.CreateProductDT
 
 	// Criar produto
 	newProduct := &productDomain.Product{
-		ID:          uuid.New().String(),
+		TenantID:    req.TenantID,
 		Name:        req.Name,
 		Description: req.Description,
-		Type:        req.Type,
 		Price:       req.Price,
-		Unit:        req.Unit,
+		Stock:       req.Stock,
+		SKU:         req.SKU,
+		Category:    req.Category,
+		ImageURL:    req.ImageURL,
 		IsActive:    true,
 	}
 
@@ -70,14 +70,20 @@ func (u *UseCase) Update(ctx context.Context, id string, req *productDomain.Upda
 	if req.Description != "" {
 		product.Description = req.Description
 	}
-	if req.Type != "" {
-		product.Type = req.Type
-	}
 	if req.Price != nil {
 		product.Price = *req.Price
 	}
-	if req.Unit != "" {
-		product.Unit = req.Unit
+	if req.Stock != nil {
+		product.Stock = *req.Stock
+	}
+	if req.SKU != "" {
+		product.SKU = req.SKU
+	}
+	if req.Category != "" {
+		product.Category = req.Category
+	}
+	if req.ImageURL != "" {
+		product.ImageURL = req.ImageURL
 	}
 	if req.IsActive != nil {
 		product.IsActive = *req.IsActive
@@ -103,4 +109,4 @@ func (u *UseCase) List(ctx context.Context, limit, offset int) ([]*productDomain
 
 func (u *UseCase) Count(ctx context.Context) (int, error) {
 	return u.productRepo.Count(ctx)
-} 
+}

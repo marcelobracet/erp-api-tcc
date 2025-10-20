@@ -6,8 +6,6 @@ import (
 
 	userDomain "erp-api/internal/domain/user"
 	"erp-api/pkg/auth"
-
-	"github.com/google/uuid"
 )
 
 // UseCase implementa a lógica de negócio para usuários
@@ -49,14 +47,14 @@ func (u *UseCase) Register(ctx context.Context, req *userDomain.CreateUserReques
 		return nil, err
 	}
 	
-	// Criar usuário com ID gerado automaticamente
+	// Criar usuário com ID gerado automaticamente pelo banco
 	newUser := &userDomain.User{
-		ID:       uuid.New().String(),
-		Email:    req.Email,
-		Password: hashedPassword,
-		Name:     req.Name,
-		Role:     req.Role,
-		IsActive: true,
+		TenantID:  req.TenantID,
+		Email:     req.Email,
+		Password:  hashedPassword,
+		Name:      req.Name,
+		Role:      req.Role,
+		IsActive:  true,
 	}
 	
 	err = u.userRepo.Create(ctx, newUser)

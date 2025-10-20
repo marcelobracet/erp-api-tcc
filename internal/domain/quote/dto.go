@@ -1,43 +1,44 @@
 package quote
 
-import "time"
-
 type CreateQuoteDTO struct {
-	ClientID   string       `json:"client_id" binding:"required"`
-	Status     QuoteStatus  `json:"status,omitempty"`
-	Date       time.Time    `json:"date" binding:"required"`
-	ValidUntil time.Time    `json:"valid_until" binding:"required"`
-	Notes      string       `json:"notes,omitempty"`
-	Items      []QuoteItemDTO `json:"items" binding:"required"`
+	TenantID       string       `json:"tenant_id" binding:"required"`
+	ClientID       string       `json:"client_id" binding:"required"`
+	UserID         string       `json:"user_id" binding:"required"`
+	Discount       float64      `json:"discount,omitempty"`
+	Status         QuoteStatus  `json:"status,omitempty"`
+	ConversionRate *float64     `json:"conversion_rate,omitempty"`
+	Notes          string       `json:"notes,omitempty"`
+	Items          []QuoteItemDTO `json:"items" binding:"required"`
 }
 
 type UpdateQuoteDTO struct {
-	ClientID   string       `json:"client_id,omitempty"`
-	Status     QuoteStatus  `json:"status,omitempty"`
-	Date       *time.Time   `json:"date,omitempty"`
-	ValidUntil *time.Time   `json:"valid_until,omitempty"`
-	Notes      string       `json:"notes,omitempty"`
-	IsActive   *bool        `json:"is_active,omitempty"`
+	ClientID       string       `json:"client_id,omitempty"`
+	UserID         string       `json:"user_id,omitempty"`
+	Discount       *float64     `json:"discount,omitempty"`
+	Status         QuoteStatus  `json:"status,omitempty"`
+	ConversionRate *float64     `json:"conversion_rate,omitempty"`
+	Notes          string       `json:"notes,omitempty"`
 }
 
 type QuoteItemDTO struct {
-	ProductID string  `json:"product_id" binding:"required"`
-	Quantity  float64 `json:"quantity" binding:"required"`
+	ProductID string `json:"product_id" binding:"required"`
+	Quantity  int    `json:"quantity" binding:"required"`
+	Price     float64 `json:"price" binding:"required"`
 }
 
 type QuoteDTO struct {
-	ID         string       `json:"id"`
-	ClientID   string       `json:"client_id"`
-	Client     *Client      `json:"client,omitempty"`
-	TotalValue float64      `json:"total_value"`
-	Status     QuoteStatus  `json:"status"`
-	Date       string       `json:"date"`
-	ValidUntil string       `json:"valid_until"`
-	Notes      string       `json:"notes,omitempty"`
-	IsActive   bool         `json:"is_active"`
-	Items      []QuoteItemDTO `json:"items,omitempty"`
-	CreatedAt  string       `json:"created_at"`
-	UpdatedAt  string       `json:"updated_at"`
+	ID             string       `json:"id"`
+	TenantID       string       `json:"tenant_id"`
+	ClientID       string       `json:"client_id"`
+	UserID         string       `json:"user_id"`
+	TotalValue     float64      `json:"total_value"`
+	Discount       float64      `json:"discount"`
+	Status         QuoteStatus  `json:"status"`
+	ConversionRate *float64     `json:"conversion_rate,omitempty"`
+	Notes          string       `json:"notes,omitempty"`
+	Items          []QuoteItemDTO `json:"items,omitempty"`
+	CreatedAt      string       `json:"created_at"`
+	UpdatedAt      string       `json:"updated_at"`
 }
 
 type QuoteListDTO struct {
@@ -49,4 +50,4 @@ type QuoteListDTO struct {
 
 type UpdateQuoteStatusDTO struct {
 	Status QuoteStatus `json:"status" binding:"required"`
-} 
+}

@@ -1,9 +1,10 @@
 package client
 
 type CreateClientDTO struct {
+	TenantID     string `json:"tenant_id" binding:"required"`
 	Name         string `json:"name" binding:"required"`
-	Email        string `json:"email" binding:"required,email"`
-	Phone        string `json:"phone" binding:"required"`
+	Email        string `json:"email,omitempty"`
+	Phone        string `json:"phone,omitempty"`
 	Document     string `json:"document" binding:"required"`
 	DocumentType string `json:"document_type" binding:"required"`
 	Address      string `json:"address,omitempty"`

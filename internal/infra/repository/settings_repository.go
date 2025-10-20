@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 
 	settingsDomain "erp-api/internal/domain/settings"
 
@@ -17,48 +16,58 @@ func NewSettingsRepository(db *gorm.DB) settingsDomain.Repository {
 	return &SettingsRepository{db: db}
 }
 
-func (r *SettingsRepository) Get(ctx context.Context) (*settingsDomain.Settings, error) {
-	var settings settingsDomain.Settings
+func (r *SettingsRepository) Get(ctx context.Context, tenantID string) (map[string]string, error) {
+	var settings []settingsDomain.Settings
 	
-	result := r.db.WithContext(ctx).First(&settings)
+	result := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Find(&settings)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// Se não existir configurações, criar uma padrão
-			settings = settingsDomain.Settings{
-				TradeName:      "Marmoraria Exemplo",
-				LegalName:      "Marmoraria Exemplo LTI",
-				CNPJ:           "00.000.000/0000-00",
-				Phone:          "(00) 0000-0000",
-				Email:          "contato@marmorariaexemplo.com",
-				Street:         "Rua Exemplo",
-				Number:         "123",
-				Complement:     "",
-				Neighborhood:   "Centro",
-				City:           "São Paulo",
-				State:          "SP",
-				ZipCode:        "00000-000",
-				PrimaryColor:   "#1976d2",
-				SecondaryColor: "#9c27b0",
-				LogoURL:        "/api/placeholder/200/8C",
-			}
-			
-			result = r.db.WithContext(ctx).Create(&settings)
-			if result.Error != nil {
-				return nil, result.Error
-			}
-		} else {
-			return nil, result.Error
+		return nil, result.Error
+	}
+
+	settingsMap := make(map[string]string)
+	for _, setting := range settings {
+		settingsMap[setting.Key] = setting.Value
+	}
+
+	// Se não existir configurações, retornar configurações padrão
+	if len(settingsMap) == 0 {
+		settingsMap = map[string]string{
+			"company_name":     "Empresa Exemplo",
+			"company_email":    "contato@empresa.com",
+			"company_phone":    "(11) 3333-4444",
+			"company_address":  "Rua Principal, 456",
+			"company_city":     "São Paulo",
+			"company_state":    "SP",
+			"company_zip":      "01234-567",
+			"primary_color":    "#2196F3",
+			"secondary_color":  "#FFC107",
+			"logo_url":         "https://example.com/logo.png",
 		}
 	}
 	
-	return &settings, nil
+	return settingsMap, nil
 }
 
-func (r *SettingsRepository) Update(ctx context.Context, settings *settingsDomain.Settings) error {
-	result := r.db.WithContext(ctx).Save(settings)
-	if result.Error != nil {
-		return result.Error
+func (r *SettingsRepository) Update(ctx context.Context, req *settingsDomain.UpdateSettingsDTO) error {
+	// Deletar configurações existentes
+	err := r.db.WithContext(ctx).Where("tenant_id = ?", req.TenantID).Delete(&settingsDomain.Settings{}).Error
+	if err != nil {
+		return err
+	}
+
+	// Criar novas configurações
+	for key, value := range req.Settings {
+		setting := &settingsDomain.Settings{
+			TenantID: req.TenantID,
+			Key:      key,
+			Value:    value,
+		}
+		
+		err := r.db.WithContext(ctx).Create(setting).Error
+		if err != nil {
+			return err
+		}
 	}
 	
 	return nil
-} 
+}

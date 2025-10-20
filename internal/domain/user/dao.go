@@ -4,6 +4,7 @@ import "time"
 
 type UserDAO struct {
 	ID           string     `db:"id"`
+	TenantID     string     `db:"tenant_id"`
 	Email        string     `db:"email"`
 	Password     string     `db:"password"`
 	Name         string     `db:"name"`
@@ -11,12 +12,12 @@ type UserDAO struct {
 	IsActive     bool       `db:"is_active"`
 	CreatedAt    time.Time  `db:"created_at"`
 	UpdatedAt    time.Time  `db:"updated_at"`
-	LastLoginAt  *time.Time `db:"last_login_at"`
 }
 
 func (dao *UserDAO) ToEntity() *User {
 	user := &User{
 		ID:        dao.ID,
+		TenantID:  dao.TenantID,
 		Email:     dao.Email,
 		Password:  dao.Password,
 		Name:      dao.Name,
@@ -26,16 +27,13 @@ func (dao *UserDAO) ToEntity() *User {
 		UpdatedAt: dao.UpdatedAt,
 	}
 	
-	if dao.LastLoginAt != nil {
-		user.LastLoginAt = dao.LastLoginAt
-	}
-	
 	return user
 }
 
 func (user *User) ToDAO() *UserDAO {
 	dao := &UserDAO{
 		ID:        user.ID,
+		TenantID:  user.TenantID,
 		Email:     user.Email,
 		Password:  user.Password,
 		Name:      user.Name,
@@ -43,10 +41,6 @@ func (user *User) ToDAO() *UserDAO {
 		IsActive:  user.IsActive,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
-	}
-	
-	if user.LastLoginAt != nil {
-		dao.LastLoginAt = user.LastLoginAt
 	}
 	
 	return dao
@@ -61,10 +55,6 @@ func (user *User) ToDTO() *UserDTO {
 		IsActive:  user.IsActive,
 		CreatedAt: user.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: user.UpdatedAt.Format(time.RFC3339),
-	}
-	
-	if user.LastLoginAt != nil {
-		dto.LastLoginAt = user.LastLoginAt.Format(time.RFC3339)
 	}
 	
 	return dto

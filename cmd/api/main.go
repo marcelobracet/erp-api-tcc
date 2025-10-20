@@ -14,6 +14,7 @@ import (
 	"erp-api/internal/delivery/http/quote"
 	"erp-api/internal/delivery/http/reports"
 	settingsHandler "erp-api/internal/delivery/http/settings"
+	"erp-api/internal/delivery/http/tenant"
 	"erp-api/internal/delivery/http/user"
 	"erp-api/internal/infra/container"
 	"erp-api/pkg/middleware"
@@ -95,6 +96,16 @@ func setupRouter(container *container.Container) *gin.Engine {
 
 	api := router.Group("/api/v1")
 	{
+		tenants := api.Group("/tenants")
+		{
+			tenants.POST("", tenant.NewHandler(container.GetTenantUseCase()).Create)
+			tenants.GET("/:id", tenant.NewHandler(container.GetTenantUseCase()).GetByID)
+			tenants.PUT("/:id", tenant.NewHandler(container.GetTenantUseCase()).Update)
+			tenants.DELETE("/:id", tenant.NewHandler(container.GetTenantUseCase()).Delete)
+			tenants.GET("", tenant.NewHandler(container.GetTenantUseCase()).List)
+			tenants.GET("/count", tenant.NewHandler(container.GetTenantUseCase()).Count)
+		}
+
 		auth := api.Group("/auth")
 		{
 			auth.POST("/login", user.NewHandler(container.GetUserUseCase()).Login)

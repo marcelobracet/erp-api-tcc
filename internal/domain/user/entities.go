@@ -8,18 +8,19 @@ import (
 
 type User struct {
 	ID           string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TenantID     string         `json:"tenant_id" gorm:"not null"`
 	Email        string         `json:"email" gorm:"uniqueIndex;not null"`
-	Password     string         `json:"-" gorm:"not null"`
+	Password     string         `json:"-" gorm:"column:password_hash;not null"`
 	Name         string         `json:"name" gorm:"not null"`
-	Role         string         `json:"role" gorm:"not null;check:role IN ('admin', 'user', 'manager')"`
+	Role         string         `json:"role" gorm:"not null;default:'user'"`
 	IsActive     bool           `json:"is_active" gorm:"default:true"`
 	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	LastLoginAt  *time.Time     `json:"last_login_at,omitempty"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 type CreateUserRequest struct {
+	TenantID string `json:"tenant_id" validate:"required"`
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 	Name     string `json:"name" validate:"required,min=2"`

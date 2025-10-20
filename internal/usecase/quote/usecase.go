@@ -5,8 +5,6 @@ import (
 	"time"
 
 	quoteDomain "erp-api/internal/domain/quote"
-
-	"github.com/google/uuid"
 )
 
 type UseCaseInterface interface {
@@ -39,21 +37,18 @@ func (u *UseCase) Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (
 	// Calcular valor total
 	totalValue := 0.0
 	for _, item := range req.Items {
-		// Aqui você faria uma consulta ao produto para pegar o preço
-		// Por simplicidade, vamos assumir que o preço vem do frontend
-		totalValue += item.Quantity * 100.0 // Preço padrão, deve vir do produto
+		totalValue += float64(item.Quantity) * item.Price
 	}
 
 	// Criar orçamento
 	newQuote := &quoteDomain.Quote{
-		ID:         uuid.New().String(),
+		TenantID:   req.TenantID,
 		ClientID:   req.ClientID,
+		UserID:     req.UserID,
 		TotalValue: totalValue,
+		Discount:   req.Discount,
 		Status:     quoteDomain.QuoteStatusPending,
-		Date:       req.Date,
-		ValidUntil: req.ValidUntil,
 		Notes:      req.Notes,
-		IsActive:   true,
 	}
 
 	// Se status foi fornecido, usar ele
@@ -69,12 +64,11 @@ func (u *UseCase) Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (
 	// Criar itens do orçamento
 	for _, itemDTO := range req.Items {
 		item := &quoteDomain.QuoteItem{
-			ID:         uuid.New().String(),
-			QuoteID:    newQuote.ID,
-			ProductID:  itemDTO.ProductID,
-			Quantity:   itemDTO.Quantity,
-			UnitPrice:  100.0, // Deve vir do produto
-			TotalPrice: itemDTO.Quantity * 100.0,
+			TenantID:  req.TenantID,
+			QuoteID:   newQuote.ID,
+			ProductID: itemDTO.ProductID,
+			Quantity:  itemDTO.Quantity,
+			Price:     itemDTO.Price,
 		}
 
 		err = u.itemRepo.Create(ctx, item)
@@ -101,20 +95,20 @@ func (u *UseCase) Update(ctx context.Context, id string, req *quoteDomain.Update
 	if req.ClientID != "" {
 		quote.ClientID = req.ClientID
 	}
+	if req.UserID != "" {
+		quote.UserID = req.UserID
+	}
+	if req.Discount != nil {
+		quote.Discount = *req.Discount
+	}
 	if req.Status != "" {
 		quote.Status = req.Status
 	}
-	if req.Date != nil {
-		quote.Date = *req.Date
-	}
-	if req.ValidUntil != nil {
-		quote.ValidUntil = *req.ValidUntil
+	if req.ConversionRate != nil {
+		quote.ConversionRate = req.ConversionRate
 	}
 	if req.Notes != "" {
 		quote.Notes = req.Notes
-	}
-	if req.IsActive != nil {
-		quote.IsActive = *req.IsActive
 	}
 
 	quote.UpdatedAt = time.Now()
@@ -145,4 +139,4 @@ func (u *UseCase) UpdateStatus(ctx context.Context, id string, req *quoteDomain.
 	}
 
 	return u.quoteRepo.UpdateStatus(ctx, id, req.Status)
-} 
+}

@@ -12,6 +12,7 @@ type UserDTO struct {
 }
 
 type CreateUserDTO struct {
+	TenantID string `json:"tenant_id" validate:"required"`
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 	Name     string `json:"name" validate:"required,min=2"`

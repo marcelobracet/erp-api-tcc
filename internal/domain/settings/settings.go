@@ -9,11 +9,11 @@ var (
 )
 
 func (req *UpdateSettingsDTO) Validate() error {
-	if req.CNPJ != "" && len(req.CNPJ) != 18 {
-		return ErrInvalidCNPJ
+	if req.TenantID == "" {
+		return errors.New("tenant_id is required")
 	}
-	if req.Email != "" && !isValidEmail(req.Email) {
-		return ErrInvalidEmail
+	if req.Settings == nil {
+		return errors.New("settings is required")
 	}
 	return nil
 }

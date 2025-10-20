@@ -11,12 +11,14 @@ import (
 	productDomain "erp-api/internal/domain/product"
 	quoteDomain "erp-api/internal/domain/quote"
 	settingsDomain "erp-api/internal/domain/settings"
+	tenantDomain "erp-api/internal/domain/tenant"
 	userDomain "erp-api/internal/domain/user"
 	"erp-api/internal/infra/repository"
 	clientUseCase "erp-api/internal/usecase/client"
 	productUseCase "erp-api/internal/usecase/product"
 	quoteUseCase "erp-api/internal/usecase/quote"
 	settingsUseCase "erp-api/internal/usecase/settings"
+	tenantUseCase "erp-api/internal/usecase/tenant"
 	userUseCase "erp-api/internal/usecase/user"
 	"erp-api/pkg/auth"
 
@@ -27,6 +29,8 @@ import (
 
 type Container struct {
 	DB             *gorm.DB
+	TenantRepo     tenantDomain.Repository
+	TenantUseCase  tenantUseCase.UseCaseInterface
 	UserRepo       userDomain.Repository
 	UserUseCase    userUseCase.UseCaseInterface
 	ClientRepo     clientDomain.Repository
@@ -129,6 +133,7 @@ func (c *Container) initializeRepositories() error {
 		return fmt.Errorf("database not initialized")
 	}
 
+	c.TenantRepo = repository.NewTenantRepository(c.DB)
 	c.UserRepo = repository.NewUserRepository(c.DB)
 	c.ClientRepo = repository.NewClientRepository(c.DB)
 	c.ProductRepo = repository.NewProductRepository(c.DB)
@@ -144,13 +149,14 @@ func (c *Container) initializeUseCases() error {
 		return fmt.Errorf("repositories not initialized")
 	}
 
+	c.TenantUseCase = tenantUseCase.NewUseCase(c.TenantRepo)
 	c.UserUseCase = userUseCase.NewUseCase(c.UserRepo, c.JWTManager, c.PassHasher)
 	c.ClientUseCase = clientUseCase.NewUseCase(c.ClientRepo)
 	c.ProductUseCase = productUseCase.NewUseCase(c.ProductRepo)
 	c.QuoteUseCase = quoteUseCase.NewUseCase(c.QuoteRepo, c.QuoteItemRepo)
 	c.SettingsUseCase = settingsUseCase.NewUseCase(c.SettingsRepo)
-	log.Printf("Use cases initialized successfully - UserRepo: %v, ClientRepo: %v, ProductRepo: %v, QuoteRepo: %v, SettingsRepo: %v, JWTManager: %v, PassHasher: %v", 
-		c.UserRepo != nil, c.ClientRepo != nil, c.ProductRepo != nil, c.QuoteRepo != nil, c.SettingsRepo != nil, c.JWTManager != nil, c.PassHasher != nil)
+	log.Printf("Use cases initialized successfully - TenantRepo: %v, UserRepo: %v, ClientRepo: %v, ProductRepo: %v, QuoteRepo: %v, SettingsRepo: %v, JWTManager: %v, PassHasher: %v",
+		c.TenantRepo != nil, c.UserRepo != nil, c.ClientRepo != nil, c.ProductRepo != nil, c.QuoteRepo != nil, c.SettingsRepo != nil, c.JWTManager != nil, c.PassHasher != nil)
 	return nil
 }
 
@@ -240,6 +246,14 @@ func (c *Container) GetSettingsRepository() settingsDomain.Repository {
 
 func (c *Container) GetSettingsUseCase() settingsUseCase.UseCaseInterface {
 	return c.SettingsUseCase
+}
+
+func (c *Container) GetTenantRepository() tenantDomain.Repository {
+	return c.TenantRepo
+}
+
+func (c *Container) GetTenantUseCase() tenantUseCase.UseCaseInterface {
+	return c.TenantUseCase
 }
 
 func (c *Container) GetJWTManager() *auth.JWTManager {
