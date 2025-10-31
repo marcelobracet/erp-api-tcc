@@ -25,10 +25,10 @@ func (r *ProductRepository) Create(ctx context.Context, product *productDomain.P
 	return nil
 }
 
-func (r *ProductRepository) GetByID(ctx context.Context, id string) (*productDomain.Product, error) {
+func (r *ProductRepository) GetByID(ctx context.Context, tenantID, id string) (*productDomain.Product, error) {
 	var product productDomain.Product
 	
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&product)
+	result := r.db.WithContext(ctx).Where("id = ? AND tenant_id = ?", id, tenantID).First(&product)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, productDomain.ErrProductNotFound
@@ -40,7 +40,10 @@ func (r *ProductRepository) GetByID(ctx context.Context, id string) (*productDom
 }
 
 func (r *ProductRepository) Update(ctx context.Context, product *productDomain.Product) error {
-	result := r.db.WithContext(ctx).Save(product)
+	// Garantir que o update só funciona se o tenant_id corresponder
+	result := r.db.WithContext(ctx).
+		Where("id = ? AND tenant_id = ?", product.ID, product.TenantID).
+		Save(product)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -52,8 +55,8 @@ func (r *ProductRepository) Update(ctx context.Context, product *productDomain.P
 	return nil
 }
 
-func (r *ProductRepository) Delete(ctx context.Context, id string) error {
-	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&productDomain.Product{})
+func (r *ProductRepository) Delete(ctx context.Context, tenantID, id string) error {
+	result := r.db.WithContext(ctx).Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&productDomain.Product{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -65,10 +68,11 @@ func (r *ProductRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *ProductRepository) List(ctx context.Context, limit, offset int) ([]*productDomain.Product, error) {
+func (r *ProductRepository) List(ctx context.Context, tenantID string, limit, offset int) ([]*productDomain.Product, error) {
 	var products []*productDomain.Product
 	
 	result := r.db.WithContext(ctx).
+		Where("tenant_id = ?", tenantID).
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -81,10 +85,10 @@ func (r *ProductRepository) List(ctx context.Context, limit, offset int) ([]*pro
 	return products, nil
 }
 
-func (r *ProductRepository) Count(ctx context.Context) (int, error) {
+func (r *ProductRepository) Count(ctx context.Context, tenantID string) (int, error) {
 	var count int64
 	
-	result := r.db.WithContext(ctx).Model(&productDomain.Product{}).Count(&count)
+	result := r.db.WithContext(ctx).Model(&productDomain.Product{}).Where("tenant_id = ?", tenantID).Count(&count)
 	if result.Error != nil {
 		return 0, result.Error
 	}

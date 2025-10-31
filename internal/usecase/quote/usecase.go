@@ -9,12 +9,12 @@ import (
 
 type UseCaseInterface interface {
 	Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (*quoteDomain.Quote, error)
-	GetByID(ctx context.Context, id string) (*quoteDomain.Quote, error)
-	Update(ctx context.Context, id string, req *quoteDomain.UpdateQuoteDTO) (*quoteDomain.Quote, error)
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*quoteDomain.Quote, error)
-	Count(ctx context.Context) (int, error)
-	UpdateStatus(ctx context.Context, id string, req *quoteDomain.UpdateQuoteStatusDTO) error
+	GetByID(ctx context.Context, tenantID, id string) (*quoteDomain.Quote, error)
+	Update(ctx context.Context, tenantID, id string, req *quoteDomain.UpdateQuoteDTO) (*quoteDomain.Quote, error)
+	Delete(ctx context.Context, tenantID, id string) error
+	List(ctx context.Context, tenantID string, limit, offset int) ([]*quoteDomain.Quote, error)
+	Count(ctx context.Context, tenantID string) (int, error)
+	UpdateStatus(ctx context.Context, tenantID, id string, req *quoteDomain.UpdateQuoteStatusDTO) error
 }
 
 type UseCase struct {
@@ -80,13 +80,13 @@ func (u *UseCase) Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (
 	return newQuote, nil
 }
 
-func (u *UseCase) GetByID(ctx context.Context, id string) (*quoteDomain.Quote, error) {
-	return u.quoteRepo.GetByID(ctx, id)
+func (u *UseCase) GetByID(ctx context.Context, tenantID, id string) (*quoteDomain.Quote, error) {
+	return u.quoteRepo.GetByID(ctx, tenantID, id)
 }
 
-func (u *UseCase) Update(ctx context.Context, id string, req *quoteDomain.UpdateQuoteDTO) (*quoteDomain.Quote, error) {
-	// Buscar orçamento existente
-	quote, err := u.quoteRepo.GetByID(ctx, id)
+func (u *UseCase) Update(ctx context.Context, tenantID, id string, req *quoteDomain.UpdateQuoteDTO) (*quoteDomain.Quote, error) {
+	// Buscar orçamento existente (já filtra por tenant_id)
+	quote, err := u.quoteRepo.GetByID(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -121,22 +121,22 @@ func (u *UseCase) Update(ctx context.Context, id string, req *quoteDomain.Update
 	return quote, nil
 }
 
-func (u *UseCase) Delete(ctx context.Context, id string) error {
-	return u.quoteRepo.Delete(ctx, id)
+func (u *UseCase) Delete(ctx context.Context, tenantID, id string) error {
+	return u.quoteRepo.Delete(ctx, tenantID, id)
 }
 
-func (u *UseCase) List(ctx context.Context, limit, offset int) ([]*quoteDomain.Quote, error) {
-	return u.quoteRepo.List(ctx, limit, offset)
+func (u *UseCase) List(ctx context.Context, tenantID string, limit, offset int) ([]*quoteDomain.Quote, error) {
+	return u.quoteRepo.List(ctx, tenantID, limit, offset)
 }
 
-func (u *UseCase) Count(ctx context.Context) (int, error) {
-	return u.quoteRepo.Count(ctx)
+func (u *UseCase) Count(ctx context.Context, tenantID string) (int, error) {
+	return u.quoteRepo.Count(ctx, tenantID)
 }
 
-func (u *UseCase) UpdateStatus(ctx context.Context, id string, req *quoteDomain.UpdateQuoteStatusDTO) error {
+func (u *UseCase) UpdateStatus(ctx context.Context, tenantID, id string, req *quoteDomain.UpdateQuoteStatusDTO) error {
 	if err := req.Validate(); err != nil {
 		return err
 	}
 
-	return u.quoteRepo.UpdateStatus(ctx, id, req.Status)
+	return u.quoteRepo.UpdateStatus(ctx, tenantID, id, req.Status)
 }

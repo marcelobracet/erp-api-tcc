@@ -9,9 +9,10 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	UserID   string `json:"user_id"`
+	TenantID string `json:"tenant_id"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -32,11 +33,12 @@ func NewJWTManager(secretKey string, accessExpiry, refreshExpiry time.Duration) 
 }
 
 // GenerateAccessToken gera um token de acesso
-func (j *JWTManager) GenerateAccessToken(userID, email, role string) (string, error) {
+func (j *JWTManager) GenerateAccessToken(userID, tenantID, email, role string) (string, error) {
 	claims := &Claims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
+		UserID:   userID,
+		TenantID: tenantID,
+		Email:    email,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.accessExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -51,11 +53,12 @@ func (j *JWTManager) GenerateAccessToken(userID, email, role string) (string, er
 }
 
 // GenerateRefreshToken gera um token de refresh
-func (j *JWTManager) GenerateRefreshToken(userID, email, role string) (string, error) {
+func (j *JWTManager) GenerateRefreshToken(userID, tenantID, email, role string) (string, error) {
 	claims := &Claims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
+		UserID:   userID,
+		TenantID: tenantID,
+		Email:    email,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -96,7 +99,7 @@ func (j *JWTManager) RefreshAccessToken(refreshToken string) (string, error) {
 		return "", err
 	}
 
-	return j.GenerateAccessToken(claims.UserID, claims.Email, claims.Role)
+	return j.GenerateAccessToken(claims.UserID, claims.TenantID, claims.Email, claims.Role)
 }
 
 type TokenPair struct {
@@ -105,13 +108,13 @@ type TokenPair struct {
 }
 
 // GenerateTokenPair gera um par de tokens (access + refresh)
-func (j *JWTManager) GenerateTokenPair(userID, email, role string) (*TokenPair, error) {
-	accessToken, err := j.GenerateAccessToken(userID, email, role)
+func (j *JWTManager) GenerateTokenPair(userID, tenantID, email, role string) (*TokenPair, error) {
+	accessToken, err := j.GenerateAccessToken(userID, tenantID, email, role)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := j.GenerateRefreshToken(userID, email, role)
+	refreshToken, err := j.GenerateRefreshToken(userID, tenantID, email, role)
 	if err != nil {
 		return nil, err
 	}

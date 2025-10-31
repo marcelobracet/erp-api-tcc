@@ -28,10 +28,10 @@ func (r *ClientRepository) Create(ctx context.Context, client *clientDomain.Clie
 	return nil
 }
 
-func (r *ClientRepository) GetByID(ctx context.Context, id string) (*clientDomain.Client, error) {
+func (r *ClientRepository) GetByID(ctx context.Context, tenantID, id string) (*clientDomain.Client, error) {
 	var client clientDomain.Client
 	
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&client)
+	result := r.db.WithContext(ctx).Where("id = ? AND tenant_id = ?", id, tenantID).First(&client)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, clientDomain.ErrClientNotFound
@@ -42,10 +42,10 @@ func (r *ClientRepository) GetByID(ctx context.Context, id string) (*clientDomai
 	return &client, nil
 }
 
-func (r *ClientRepository) GetByDocument(ctx context.Context, document string) (*clientDomain.Client, error) {
+func (r *ClientRepository) GetByDocument(ctx context.Context, tenantID, document string) (*clientDomain.Client, error) {
 	var client clientDomain.Client
 	
-	result := r.db.WithContext(ctx).Where("document = ?", document).First(&client)
+	result := r.db.WithContext(ctx).Where("document = ? AND tenant_id = ?", document, tenantID).First(&client)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, clientDomain.ErrClientNotFound
@@ -57,7 +57,10 @@ func (r *ClientRepository) GetByDocument(ctx context.Context, document string) (
 }
 
 func (r *ClientRepository) Update(ctx context.Context, client *clientDomain.Client) error {
-	result := r.db.WithContext(ctx).Save(client)
+	// Garantir que o update só funciona se o tenant_id corresponder
+	result := r.db.WithContext(ctx).
+		Where("id = ? AND tenant_id = ?", client.ID, client.TenantID).
+		Save(client)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -69,8 +72,8 @@ func (r *ClientRepository) Update(ctx context.Context, client *clientDomain.Clie
 	return nil
 }
 
-func (r *ClientRepository) Delete(ctx context.Context, id string) error {
-	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&clientDomain.Client{})
+func (r *ClientRepository) Delete(ctx context.Context, tenantID, id string) error {
+	result := r.db.WithContext(ctx).Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&clientDomain.Client{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -82,10 +85,11 @@ func (r *ClientRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *ClientRepository) List(ctx context.Context, limit, offset int) ([]*clientDomain.Client, error) {
+func (r *ClientRepository) List(ctx context.Context, tenantID string, limit, offset int) ([]*clientDomain.Client, error) {
 	var clients []*clientDomain.Client
 	
 	result := r.db.WithContext(ctx).
+		Where("tenant_id = ?", tenantID).
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -98,10 +102,10 @@ func (r *ClientRepository) List(ctx context.Context, limit, offset int) ([]*clie
 	return clients, nil
 }
 
-func (r *ClientRepository) Count(ctx context.Context) (int, error) {
+func (r *ClientRepository) Count(ctx context.Context, tenantID string) (int, error) {
 	var count int64
 	
-	result := r.db.WithContext(ctx).Model(&clientDomain.Client{}).Count(&count)
+	result := r.db.WithContext(ctx).Model(&clientDomain.Client{}).Where("tenant_id = ?", tenantID).Count(&count)
 	if result.Error != nil {
 		return 0, result.Error
 	}

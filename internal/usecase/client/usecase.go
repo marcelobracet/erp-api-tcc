@@ -9,11 +9,11 @@ import (
 
 type UseCaseInterface interface {
 	Create(ctx context.Context, req *clientDomain.CreateClientDTO) (*clientDomain.Client, error)
-	GetByID(ctx context.Context, id string) (*clientDomain.Client, error)
-	Update(ctx context.Context, id string, req *clientDomain.UpdateClientDTO) (*clientDomain.Client, error)
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*clientDomain.Client, error)
-	Count(ctx context.Context) (int, error)
+	GetByID(ctx context.Context, tenantID, id string) (*clientDomain.Client, error)
+	Update(ctx context.Context, tenantID, id string, req *clientDomain.UpdateClientDTO) (*clientDomain.Client, error)
+	Delete(ctx context.Context, tenantID, id string) error
+	List(ctx context.Context, tenantID string, limit, offset int) ([]*clientDomain.Client, error)
+	Count(ctx context.Context, tenantID string) (int, error)
 }
 
 type UseCase struct {
@@ -31,8 +31,8 @@ func (u *UseCase) Create(ctx context.Context, req *clientDomain.CreateClientDTO)
 		return nil, err
 	}
 
-	// Verificar se cliente já existe
-	existingClient, err := u.clientRepo.GetByDocument(ctx, req.Document)
+	// Verificar se cliente já existe no mesmo tenant
+	existingClient, err := u.clientRepo.GetByDocument(ctx, req.TenantID, req.Document)
 	if err != nil && err != clientDomain.ErrClientNotFound {
 		return nil, err
 	}
@@ -64,13 +64,13 @@ func (u *UseCase) Create(ctx context.Context, req *clientDomain.CreateClientDTO)
 	return newClient, nil
 }
 
-func (u *UseCase) GetByID(ctx context.Context, id string) (*clientDomain.Client, error) {
-	return u.clientRepo.GetByID(ctx, id)
+func (u *UseCase) GetByID(ctx context.Context, tenantID, id string) (*clientDomain.Client, error) {
+	return u.clientRepo.GetByID(ctx, tenantID, id)
 }
 
-func (u *UseCase) Update(ctx context.Context, id string, req *clientDomain.UpdateClientDTO) (*clientDomain.Client, error) {
-	// Buscar cliente existente
-	client, err := u.clientRepo.GetByID(ctx, id)
+func (u *UseCase) Update(ctx context.Context, tenantID, id string, req *clientDomain.UpdateClientDTO) (*clientDomain.Client, error) {
+	// Buscar cliente existente (já filtra por tenant_id)
+	client, err := u.clientRepo.GetByID(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -117,14 +117,14 @@ func (u *UseCase) Update(ctx context.Context, id string, req *clientDomain.Updat
 	return client, nil
 }
 
-func (u *UseCase) Delete(ctx context.Context, id string) error {
-	return u.clientRepo.Delete(ctx, id)
+func (u *UseCase) Delete(ctx context.Context, tenantID, id string) error {
+	return u.clientRepo.Delete(ctx, tenantID, id)
 }
 
-func (u *UseCase) List(ctx context.Context, limit, offset int) ([]*clientDomain.Client, error) {
-	return u.clientRepo.List(ctx, limit, offset)
+func (u *UseCase) List(ctx context.Context, tenantID string, limit, offset int) ([]*clientDomain.Client, error) {
+	return u.clientRepo.List(ctx, tenantID, limit, offset)
 }
 
-func (u *UseCase) Count(ctx context.Context) (int, error) {
-	return u.clientRepo.Count(ctx)
+func (u *UseCase) Count(ctx context.Context, tenantID string) (int, error) {
+	return u.clientRepo.Count(ctx, tenantID)
 } 

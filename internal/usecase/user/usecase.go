@@ -92,7 +92,7 @@ func (u *UseCase) Login(ctx context.Context, req *userDomain.LoginRequest) (*use
 	}
 	
 	// Gerar tokens
-	tokenPair, err := u.jwtManager.GenerateTokenPair(user.ID, user.Email, user.Role)
+	tokenPair, err := u.jwtManager.GenerateTokenPair(user.ID, user.TenantID, user.Email, user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (u *UseCase) RefreshToken(ctx context.Context, req *userDomain.RefreshToken
 	}
 	
 	// Gerar novo access token
-	accessToken, err := u.jwtManager.GenerateAccessToken(user.ID, user.Email, user.Role)
+	accessToken, err := u.jwtManager.GenerateAccessToken(user.ID, user.TenantID, user.Email, user.Role)
 	if err != nil {
 		return nil, err
 	}

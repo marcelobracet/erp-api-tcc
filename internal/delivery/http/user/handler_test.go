@@ -90,7 +90,7 @@ func (m *MockUseCase) Login(ctx context.Context, req *userDomain.LoginRequest) (
 	
 	// Simular tokens
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
-	tokenPair, err := jwtManager.GenerateTokenPair(user.ID, user.Email, user.Role)
+	tokenPair, err := jwtManager.GenerateTokenPair(user.ID, user.TenantID, user.Email, user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (m *MockUseCase) RefreshToken(ctx context.Context, req *userDomain.RefreshT
 	}
 	
 	// Gerar novo access token
-	accessToken, err := jwtManager.GenerateAccessToken(user.ID, user.Email, user.Role)
+	accessToken, err := jwtManager.GenerateAccessToken(user.ID, user.TenantID, user.Email, user.Role)
 	if err != nil {
 		return nil, err
 	}

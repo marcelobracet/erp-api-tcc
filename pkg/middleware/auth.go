@@ -65,6 +65,7 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 
 		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
+		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
 		c.Set("claims", claims)
@@ -126,6 +127,7 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 
 		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
+		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
 		c.Set("claims", claims)
@@ -195,6 +197,7 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 
 		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
+		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
 		c.Set("claims", claims)
@@ -235,6 +238,7 @@ func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 
 		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
+		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
 		c.Set("claims", claims)
@@ -270,11 +274,11 @@ func GetUserRoleFromContext(c *gin.Context) (string, bool) {
 	return userRole.(string), true
 }
 
-// GetClaimsFromContext extrai as claims do contexto
-func GetClaimsFromContext(c *gin.Context) (*auth.Claims, bool) {
-	claims, exists := c.Get("claims")
+// GetTenantIDFromContext extrai o tenant_id do contexto
+func GetTenantIDFromContext(c *gin.Context) (string, bool) {
+	tenantID, exists := c.Get("tenant_id")
 	if !exists {
-		return nil, false
+		return "", false
 	}
-	return claims.(*auth.Claims), true
+	return tenantID.(string), true
 } 

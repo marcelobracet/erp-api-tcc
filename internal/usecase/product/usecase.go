@@ -9,11 +9,11 @@ import (
 
 type UseCaseInterface interface {
 	Create(ctx context.Context, req *productDomain.CreateProductDTO) (*productDomain.Product, error)
-	GetByID(ctx context.Context, id string) (*productDomain.Product, error)
-	Update(ctx context.Context, id string, req *productDomain.UpdateProductDTO) (*productDomain.Product, error)
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*productDomain.Product, error)
-	Count(ctx context.Context) (int, error)
+	GetByID(ctx context.Context, tenantID, id string) (*productDomain.Product, error)
+	Update(ctx context.Context, tenantID, id string, req *productDomain.UpdateProductDTO) (*productDomain.Product, error)
+	Delete(ctx context.Context, tenantID, id string) error
+	List(ctx context.Context, tenantID string, limit, offset int) ([]*productDomain.Product, error)
+	Count(ctx context.Context, tenantID string) (int, error)
 }
 
 type UseCase struct {
@@ -52,13 +52,13 @@ func (u *UseCase) Create(ctx context.Context, req *productDomain.CreateProductDT
 	return newProduct, nil
 }
 
-func (u *UseCase) GetByID(ctx context.Context, id string) (*productDomain.Product, error) {
-	return u.productRepo.GetByID(ctx, id)
+func (u *UseCase) GetByID(ctx context.Context, tenantID, id string) (*productDomain.Product, error) {
+	return u.productRepo.GetByID(ctx, tenantID, id)
 }
 
-func (u *UseCase) Update(ctx context.Context, id string, req *productDomain.UpdateProductDTO) (*productDomain.Product, error) {
-	// Buscar produto existente
-	product, err := u.productRepo.GetByID(ctx, id)
+func (u *UseCase) Update(ctx context.Context, tenantID, id string, req *productDomain.UpdateProductDTO) (*productDomain.Product, error) {
+	// Buscar produto existente (já filtra por tenant_id)
+	product, err := u.productRepo.GetByID(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +99,14 @@ func (u *UseCase) Update(ctx context.Context, id string, req *productDomain.Upda
 	return product, nil
 }
 
-func (u *UseCase) Delete(ctx context.Context, id string) error {
-	return u.productRepo.Delete(ctx, id)
+func (u *UseCase) Delete(ctx context.Context, tenantID, id string) error {
+	return u.productRepo.Delete(ctx, tenantID, id)
 }
 
-func (u *UseCase) List(ctx context.Context, limit, offset int) ([]*productDomain.Product, error) {
-	return u.productRepo.List(ctx, limit, offset)
+func (u *UseCase) List(ctx context.Context, tenantID string, limit, offset int) ([]*productDomain.Product, error) {
+	return u.productRepo.List(ctx, tenantID, limit, offset)
 }
 
-func (u *UseCase) Count(ctx context.Context) (int, error) {
-	return u.productRepo.Count(ctx)
+func (u *UseCase) Count(ctx context.Context, tenantID string) (int, error) {
+	return u.productRepo.Count(ctx, tenantID)
 }

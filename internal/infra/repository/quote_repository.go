@@ -25,12 +25,12 @@ func (r *QuoteRepository) Create(ctx context.Context, quote *quoteDomain.Quote) 
 	return nil
 }
 
-func (r *QuoteRepository) GetByID(ctx context.Context, id string) (*quoteDomain.Quote, error) {
+func (r *QuoteRepository) GetByID(ctx context.Context, tenantID, id string) (*quoteDomain.Quote, error) {
 	var quote quoteDomain.Quote
 	
 	result := r.db.WithContext(ctx).
 		Preload("Client").
-		Where("id = ?", id).
+		Where("id = ? AND tenant_id = ?", id, tenantID).
 		First(&quote)
 	
 	if result.Error != nil {
@@ -44,7 +44,9 @@ func (r *QuoteRepository) GetByID(ctx context.Context, id string) (*quoteDomain.
 }
 
 func (r *QuoteRepository) Update(ctx context.Context, quote *quoteDomain.Quote) error {
-	result := r.db.WithContext(ctx).Save(quote)
+	result := r.db.WithContext(ctx).
+		Where("id = ? AND tenant_id = ?", quote.ID, quote.TenantID).
+		Save(quote)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -56,8 +58,8 @@ func (r *QuoteRepository) Update(ctx context.Context, quote *quoteDomain.Quote) 
 	return nil
 }
 
-func (r *QuoteRepository) Delete(ctx context.Context, id string) error {
-	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&quoteDomain.Quote{})
+func (r *QuoteRepository) Delete(ctx context.Context, tenantID, id string) error {
+	result := r.db.WithContext(ctx).Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&quoteDomain.Quote{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -69,11 +71,12 @@ func (r *QuoteRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *QuoteRepository) List(ctx context.Context, limit, offset int) ([]*quoteDomain.Quote, error) {
+func (r *QuoteRepository) List(ctx context.Context, tenantID string, limit, offset int) ([]*quoteDomain.Quote, error) {
 	var quotes []*quoteDomain.Quote
 	
 	result := r.db.WithContext(ctx).
 		Preload("Client").
+		Where("tenant_id = ?", tenantID).
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -86,10 +89,10 @@ func (r *QuoteRepository) List(ctx context.Context, limit, offset int) ([]*quote
 	return quotes, nil
 }
 
-func (r *QuoteRepository) Count(ctx context.Context) (int, error) {
+func (r *QuoteRepository) Count(ctx context.Context, tenantID string) (int, error) {
 	var count int64
 	
-	result := r.db.WithContext(ctx).Model(&quoteDomain.Quote{}).Count(&count)
+	result := r.db.WithContext(ctx).Model(&quoteDomain.Quote{}).Where("tenant_id = ?", tenantID).Count(&count)
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -97,10 +100,10 @@ func (r *QuoteRepository) Count(ctx context.Context) (int, error) {
 	return int(count), nil
 }
 
-func (r *QuoteRepository) UpdateStatus(ctx context.Context, id string, status quoteDomain.QuoteStatus) error {
+func (r *QuoteRepository) UpdateStatus(ctx context.Context, tenantID, id string, status quoteDomain.QuoteStatus) error {
 	result := r.db.WithContext(ctx).
 		Model(&quoteDomain.Quote{}).
-		Where("id = ?", id).
+		Where("id = ? AND tenant_id = ?", id, tenantID).
 		Update("status", status)
 	
 	if result.Error != nil {

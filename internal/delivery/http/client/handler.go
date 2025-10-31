@@ -6,6 +6,7 @@ import (
 
 	clientDomain "erp-api/internal/domain/client"
 	clientUseCase "erp-api/internal/usecase/client"
+	"erp-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,12 +23,28 @@ func NewHandler(clientUseCase clientUseCase.UseCaseInterface) *Handler {
 
 // Create cria um novo cliente
 func (h *Handler) Create(c *gin.Context) {
+	tenantID, exists := middleware.GetTenantIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
 	var req clientDomain.CreateClientDTO
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request body",
 			"details": err.Error(),
+		})
+		return
+	}
+
+	// Validar que o tenant_id do request corresponde ao tenant_id do usuário autenticado
+	if req.TenantID != tenantID {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Tenant ID mismatch",
 		})
 		return
 	}
@@ -52,9 +69,17 @@ func (h *Handler) Create(c *gin.Context) {
 
 // GetByID obtém um cliente por ID
 func (h *Handler) GetByID(c *gin.Context) {
+	tenantID, exists := middleware.GetTenantIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
 	id := c.Param("id")
 	
-	client, err := h.clientUseCase.GetByID(c.Request.Context(), id)
+	client, err := h.clientUseCase.GetByID(c.Request.Context(), tenantID, id)
 	if err != nil {
 		switch err {
 		case clientDomain.ErrClientNotFound:
@@ -74,6 +99,14 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 // Update atualiza um cliente
 func (h *Handler) Update(c *gin.Context) {
+	tenantID, exists := middleware.GetTenantIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
 	id := c.Param("id")
 	var req clientDomain.UpdateClientDTO
 	
@@ -85,7 +118,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 	
-	client, err := h.clientUseCase.Update(c.Request.Context(), id, &req)
+	client, err := h.clientUseCase.Update(c.Request.Context(), tenantID, id, &req)
 	if err != nil {
 		switch err {
 		case clientDomain.ErrClientNotFound:
@@ -105,9 +138,17 @@ func (h *Handler) Update(c *gin.Context) {
 
 // Delete deleta um cliente
 func (h *Handler) Delete(c *gin.Context) {
+	tenantID, exists := middleware.GetTenantIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
 	id := c.Param("id")
 	
-	err := h.clientUseCase.Delete(c.Request.Context(), id)
+	err := h.clientUseCase.Delete(c.Request.Context(), tenantID, id)
 	if err != nil {
 		switch err {
 		case clientDomain.ErrClientNotFound:
@@ -127,6 +168,14 @@ func (h *Handler) Delete(c *gin.Context) {
 
 // List lista clientes
 func (h *Handler) List(c *gin.Context) {
+	tenantID, exists := middleware.GetTenantIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
 	limitStr := c.DefaultQuery("limit", "10")
 	offsetStr := c.DefaultQuery("offset", "0")
 	
@@ -146,7 +195,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 	
-	clients, err := h.clientUseCase.List(c.Request.Context(), limit, offset)
+	clients, err := h.clientUseCase.List(c.Request.Context(), tenantID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -154,7 +203,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 	
-	total, err := h.clientUseCase.Count(c.Request.Context())
+	total, err := h.clientUseCase.Count(c.Request.Context(), tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -192,7 +241,15 @@ func (h *Handler) List(c *gin.Context) {
 
 // Count conta clientes
 func (h *Handler) Count(c *gin.Context) {
-	count, err := h.clientUseCase.Count(c.Request.Context())
+	tenantID, exists := middleware.GetTenantIDFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
+	count, err := h.clientUseCase.Count(c.Request.Context(), tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
