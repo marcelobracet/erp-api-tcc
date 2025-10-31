@@ -15,12 +15,12 @@ func TestJWTManager_GenerateAccessToken(t *testing.T) {
 	userID := "user-123"
 	email := "test@example.com"
 	role := "user"
-	
-	token, err := jwtManager.GenerateAccessToken(userID, email, role)
+	provider := "local"
+
+	token, err := jwtManager.GenerateAccessToken(userID, email, role, provider)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
-	
 	if token == "" {
 		t.Error("Expected token to be generated")
 	}
@@ -54,12 +54,12 @@ func TestJWTManager_GenerateRefreshToken(t *testing.T) {
 	userID := "user-123"
 	email := "test@example.com"
 	role := "user"
-	
-	token, err := jwtManager.GenerateRefreshToken(userID, email, role)
+	provider := "local"
+
+	token, err := jwtManager.GenerateRefreshToken(userID, email, role, provider)
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
-	
 	if token == "" {
 		t.Error("Expected refresh token to be generated")
 	}
@@ -85,12 +85,12 @@ func TestJWTManager_ValidateToken(t *testing.T) {
 	userID := "user-123"
 	email := "test@example.com"
 	role := "user"
-	
-	token, err := jwtManager.GenerateAccessToken(userID, email, role)
+	provider := "test-provider"
+
+	token, err := jwtManager.GenerateAccessToken(userID, email, role, provider)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
-	
 	// Testar token válido
 	claims, err := jwtManager.ValidateToken(token)
 	if err != nil {
@@ -120,11 +120,11 @@ func TestJWTManager_RefreshAccessToken(t *testing.T) {
 	role := "user"
 	
 	// Gerar refresh token
-	refreshToken, err := jwtManager.GenerateRefreshToken(userID, email, role)
+	deviceID := "test-device-id"
+	refreshToken, err := jwtManager.GenerateRefreshToken(userID, email, role, deviceID)
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
-	
 	// Gerar novo access token usando refresh token
 	newAccessToken, err := jwtManager.RefreshAccessToken(refreshToken)
 	if err != nil {
@@ -156,8 +156,9 @@ func TestJWTManager_GenerateTokenPair(t *testing.T) {
 	userID := "user-123"
 	email := "test@example.com"
 	role := "user"
-	
-	tokenPair, err := jwtManager.GenerateTokenPair(userID, email, role)
+
+	deviceID := "test-device-id"
+	tokenPair, err := jwtManager.GenerateTokenPair(userID, email, role, deviceID)
 	if err != nil {
 		t.Fatalf("GenerateTokenPair() error = %v", err)
 	}
@@ -201,12 +202,12 @@ func TestJWTManager_TokenExpiration(t *testing.T) {
 	userID := "user-123"
 	email := "test@example.com"
 	role := "user"
-	
-	token, err := jwtManager.GenerateAccessToken(userID, email, role)
+	deviceID := "test-device-id"
+
+	token, err := jwtManager.GenerateAccessToken(userID, email, role, deviceID)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
-	
 	// Aguardar o token expirar
 	time.Sleep(10 * time.Millisecond)
 	

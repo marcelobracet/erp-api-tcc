@@ -82,7 +82,7 @@ func TestAuthMiddleware_Authenticate_ValidToken(t *testing.T) {
 	middleware := NewAuthMiddleware(jwtManager)
 	
 	// Gerar token válido
-	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user")
+	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user", "test-device-id")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestAuthMiddleware_RequireRole(t *testing.T) {
 	middleware := NewAuthMiddleware(jwtManager)
 	
 	// Gerar token para usuário com role "user"
-	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user")
+	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user", "test-device-id")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestAuthMiddleware_RequireRole_Success(t *testing.T) {
 	middleware := NewAuthMiddleware(jwtManager)
 	
 	// Gerar token para usuário com role "admin"
-	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "admin")
+	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "admin", "test-device-id")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestAuthMiddleware_RequireAnyRole(t *testing.T) {
 	middleware := NewAuthMiddleware(jwtManager)
 	
 	// Gerar token para usuário com role "user"
-	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user")
+	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user", "test-device-id")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -229,7 +229,7 @@ func TestAuthMiddleware_RequireAnyRole_Success(t *testing.T) {
 	middleware := NewAuthMiddleware(jwtManager)
 	
 	// Gerar token para usuário com role "manager"
-	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "manager")
+	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "manager", "test-device-id")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestAuthMiddleware_OptionalAuth(t *testing.T) {
 	middleware := NewAuthMiddleware(jwtManager)
 	
 	// Gerar token válido
-	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user")
+	token, err := jwtManager.GenerateAccessToken("user-123", "test@example.com", "user", "test-device-id")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}

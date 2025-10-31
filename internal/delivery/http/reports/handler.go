@@ -64,11 +64,12 @@ func (h *Handler) Export(c *gin.Context) {
 }
 
 func (h *Handler) buildProductListDTO(c *gin.Context, limit, offset int) (*productDomain.ProductListDTO, error) {
-	products, err := h.productUseCase.List(c.Request.Context(), limit, offset)
+	tenantID := c.GetString("tenant_id") 
+	products, err := h.productUseCase.List(c.Request.Context(), tenantID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	total, err := h.productUseCase.Count(c.Request.Context())
+	total, err := h.productUseCase.Count(c.Request.Context(), tenantID)
 	if err != nil {
 		return nil, err
 	}
