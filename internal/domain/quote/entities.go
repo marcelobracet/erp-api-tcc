@@ -37,7 +37,7 @@ type QuoteItem struct {
 	ProductID string    `json:"product_id" gorm:"not null"`
 	Quantity  int       `json:"quantity" gorm:"not null;default:1"`
 	Price     float64   `json:"price" gorm:"not null"`
-	Total     float64   `json:"total" gorm:"->;column:total"`
+	Total     float64   `json:"total" gorm:"->"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }

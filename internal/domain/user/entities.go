@@ -14,6 +14,7 @@ type User struct {
 	Name         string         `json:"name" gorm:"not null"`
 	Role         string         `json:"role" gorm:"not null;default:'user'"`
 	IsActive     bool           `json:"is_active" gorm:"default:true"`
+	LastLoginAt  *time.Time     `json:"last_login_at,omitempty"`
 	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`

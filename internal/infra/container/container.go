@@ -55,6 +55,10 @@ func (c *Container) Initialize() error {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 
+	if err := c.runMigrations(); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
 	if err := c.initializeAuth(); err != nil {
 		return fmt.Errorf("failed to initialize auth: %w", err)
 	}
@@ -126,6 +130,193 @@ func (c *Container) initializeDatabase() error {
 	c.DB = db
 	log.Println("Database initialized successfully")
 	return nil
+}
+
+func (c *Container) runMigrations() error {
+	if c.DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	log.Println("Running database migrations...")
+
+	// Habilitar extensão UUID se necessário
+	if err := c.DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
+		log.Printf("Warning: Could not create uuid-ossp extension: %v", err)
+		// Tentar gen_random_uuid() que é nativo do PostgreSQL 13+
+		if err := c.DB.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"").Error; err != nil {
+			log.Printf("Warning: Could not create pgcrypto extension: %v", err)
+		}
+	}
+
+	// Executar AutoMigrate para todas as entidades na ordem correta
+	// Ordem importa devido às foreign keys
+	err := c.DB.AutoMigrate(
+		&tenantDomain.Tenant{},
+		&userDomain.User{},
+		&clientDomain.Client{},
+		&productDomain.Product{},
+		&quoteDomain.Quote{},
+		&quoteDomain.QuoteItem{},
+		&settingsDomain.Settings{},
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	c.createForeignKeys()
+
+	c.createGeneratedColumnsAndIndexes()
+
+	log.Println("Database migrations completed successfully")
+	return nil
+}
+
+func (c *Container) createForeignKeys() {
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_users_tenant'
+			) THEN
+				ALTER TABLE users ADD CONSTRAINT fk_users_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_clients_tenant'
+			) THEN
+				ALTER TABLE clients ADD CONSTRAINT fk_clients_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_products_tenant'
+			) THEN
+				ALTER TABLE products ADD CONSTRAINT fk_products_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_tenant'
+			) THEN
+				ALTER TABLE quotes ADD CONSTRAINT fk_quotes_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_client'
+			) THEN
+				ALTER TABLE quotes ADD CONSTRAINT fk_quotes_client 
+				FOREIGN KEY (client_id) REFERENCES clients(id);
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_user'
+			) THEN
+				ALTER TABLE quotes ADD CONSTRAINT fk_quotes_user 
+				FOREIGN KEY (user_id) REFERENCES users(id);
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quote_items_tenant'
+			) THEN
+				ALTER TABLE quote_items ADD CONSTRAINT fk_quote_items_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quote_items_quote'
+			) THEN
+				ALTER TABLE quote_items ADD CONSTRAINT fk_quote_items_quote 
+				FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE;
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quote_items_product'
+			) THEN
+				ALTER TABLE quote_items ADD CONSTRAINT fk_quote_items_product 
+				FOREIGN KEY (product_id) REFERENCES products(id);
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_settings_tenant'
+			) THEN
+				ALTER TABLE settings ADD CONSTRAINT fk_settings_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+		END $$;
+	`)
+}
+
+func (c *Container) createGeneratedColumnsAndIndexes() {
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_name = 'quote_items' AND column_name = 'total'
+			) THEN
+				ALTER TABLE quote_items ADD COLUMN total NUMERIC(12,2) 
+				GENERATED ALWAYS AS (quantity * price) STORED;
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_indexes WHERE indexname = 'idx_clients_document_tenant'
+			) THEN
+				CREATE UNIQUE INDEX idx_clients_document_tenant ON clients(document, tenant_id);
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_indexes WHERE indexname = 'idx_settings_key_tenant'
+			) THEN
+				CREATE UNIQUE INDEX idx_settings_key_tenant ON settings(key, tenant_id);
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'clients_document_type_check'
+			) THEN
+				ALTER TABLE clients ADD CONSTRAINT clients_document_type_check 
+				CHECK (document_type IN ('CPF', 'CNPJ'));
+			END IF;
+		END $$;
+	`)
 }
 
 func (c *Container) initializeRepositories() error {

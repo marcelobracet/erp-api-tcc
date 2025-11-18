@@ -9,22 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware é o middleware de autenticação
 type AuthMiddleware struct {
 	jwtManager *auth.JWTManager
 }
 
-// NewAuthMiddleware cria uma nova instância do middleware de autenticação
 func NewAuthMiddleware(jwtManager *auth.JWTManager) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtManager: jwtManager,
 	}
 }
 
-// Authenticate é o middleware que valida o token JWT
 func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extrair token do header Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -34,7 +30,6 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		// Verificar se o header começa com "Bearer "
 		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid authorization header format",
@@ -43,7 +38,6 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		// Extrair o token
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -53,7 +47,6 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		// Validar o token
 		claims, err := m.jwtManager.ValidateToken(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -63,7 +56,6 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
 		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
@@ -74,10 +66,8 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 	}
 }
 
-// RequireRole é o middleware que verifica se o usuário tem a role necessária
 func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extrair token do header Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -87,7 +77,6 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 			return
 		}
 
-		// Verificar se o header começa com "Bearer "
 		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid authorization header format",
@@ -96,7 +85,6 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 			return
 		}
 
-		// Extrair o token
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -106,7 +94,6 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 			return
 		}
 
-		// Validar o token
 		claims, err := m.jwtManager.ValidateToken(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -116,7 +103,6 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 			return
 		}
 
-		// Verificar role
 		if claims.Role != requiredRole {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error": "Insufficient permissions",
@@ -125,7 +111,6 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 			return
 		}
 
-		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
 		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
@@ -136,10 +121,8 @@ func (m *AuthMiddleware) RequireRole(requiredRole string) gin.HandlerFunc {
 	}
 }
 
-// RequireAnyRole é o middleware que verifica se o usuário tem pelo menos uma das roles necessárias
 func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extrair token do header Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -149,7 +132,6 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 			return
 		}
 
-		// Verificar se o header começa com "Bearer "
 		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid authorization header format",
@@ -158,7 +140,6 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 			return
 		}
 
-		// Extrair o token
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -168,7 +149,6 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 			return
 		}
 
-		// Validar o token
 		claims, err := m.jwtManager.ValidateToken(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -178,7 +158,6 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 			return
 		}
 
-		// Verificar se o usuário tem pelo menos uma das roles necessárias
 		hasRequiredRole := false
 		for _, role := range requiredRoles {
 			if claims.Role == role {
@@ -195,7 +174,6 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 			return
 		}
 
-		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
 		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
@@ -206,37 +184,31 @@ func (m *AuthMiddleware) RequireAnyRole(requiredRoles ...string) gin.HandlerFunc
 	}
 }
 
-// OptionalAuth é o middleware que adiciona informações do usuário se o token for fornecido
 func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extrair token do header Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.Next()
 			return
 		}
 
-		// Verificar se o header começa com "Bearer "
 		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.Next()
 			return
 		}
 
-		// Extrair o token
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			c.Next()
 			return
 		}
 
-		// Validar o token (não falhar se inválido)
 		claims, err := m.jwtManager.ValidateToken(token)
 		if err != nil {
 			c.Next()
 			return
 		}
 
-		// Adicionar claims ao contexto
 		c.Set("user_id", claims.UserID)
 		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_email", claims.Email)
@@ -247,7 +219,6 @@ func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 	}
 }
 
-// GetUserIDFromContext extrai o user_id do contexto
 func GetUserIDFromContext(c *gin.Context) (string, bool) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -256,7 +227,6 @@ func GetUserIDFromContext(c *gin.Context) (string, bool) {
 	return userID.(string), true
 }
 
-// GetUserEmailFromContext extrai o user_email do contexto
 func GetUserEmailFromContext(c *gin.Context) (string, bool) {
 	userEmail, exists := c.Get("user_email")
 	if !exists {
