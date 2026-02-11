@@ -9,6 +9,7 @@ import (
 	"erp-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
@@ -23,6 +24,8 @@ func NewHandler(clientUseCase clientUseCase.UseCaseInterface) *Handler {
 
 // Create cria um novo cliente
 func (h *Handler) Create(c *gin.Context) {
+	log.Info().Msg("Create client started")
+
 	tenantID, exists := middleware.GetTenantIDFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -32,10 +35,10 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	var req clientDomain.CreateClientDTO
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
@@ -48,7 +51,7 @@ func (h *Handler) Create(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	client, err := h.clientUseCase.Create(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
@@ -63,12 +66,14 @@ func (h *Handler) Create(c *gin.Context) {
 		}
 		return
 	}
-	
+
+	log.Info().Msg("Create client ended")
 	c.JSON(http.StatusCreated, client)
 }
 
 // GetByID obtém um cliente por ID
 func (h *Handler) GetByID(c *gin.Context) {
+	log.Info().Msg("Get client by ID started")
 	tenantID, exists := middleware.GetTenantIDFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -78,7 +83,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	
+
 	client, err := h.clientUseCase.GetByID(c.Request.Context(), tenantID, id)
 	if err != nil {
 		switch err {
@@ -93,12 +98,15 @@ func (h *Handler) GetByID(c *gin.Context) {
 		}
 		return
 	}
-	
+
+	log.Info().Msg("Get client by ID ended")
 	c.JSON(http.StatusOK, client)
 }
 
 // Update atualiza um cliente
 func (h *Handler) Update(c *gin.Context) {
+	log.Info().Msg("Update client started")
+
 	tenantID, exists := middleware.GetTenantIDFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -109,15 +117,15 @@ func (h *Handler) Update(c *gin.Context) {
 
 	id := c.Param("id")
 	var req clientDomain.UpdateClientDTO
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	client, err := h.clientUseCase.Update(c.Request.Context(), tenantID, id, &req)
 	if err != nil {
 		switch err {
@@ -132,12 +140,15 @@ func (h *Handler) Update(c *gin.Context) {
 		}
 		return
 	}
-	
+
+	log.Info().Msg("Update client ended")
 	c.JSON(http.StatusOK, client)
 }
 
 // Delete deleta um cliente
 func (h *Handler) Delete(c *gin.Context) {
+	log.Info().Msg("Delete client started")
+
 	tenantID, exists := middleware.GetTenantIDFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -147,7 +158,7 @@ func (h *Handler) Delete(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	
+
 	err := h.clientUseCase.Delete(c.Request.Context(), tenantID, id)
 	if err != nil {
 		switch err {
@@ -162,12 +173,15 @@ func (h *Handler) Delete(c *gin.Context) {
 		}
 		return
 	}
-	
+
+	log.Info().Msg("Delete client ended")
 	c.Status(http.StatusNoContent)
 }
 
 // List lista clientes
 func (h *Handler) List(c *gin.Context) {
+	log.Info().Msg("List clients started")
+
 	tenantID, exists := middleware.GetTenantIDFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -178,7 +192,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	limitStr := c.DefaultQuery("limit", "10")
 	offsetStr := c.DefaultQuery("offset", "0")
-	
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -186,7 +200,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -194,7 +208,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	clients, err := h.clientUseCase.List(c.Request.Context(), tenantID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -202,7 +216,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	total, err := h.clientUseCase.Count(c.Request.Context(), tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -210,14 +224,14 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	response := clientDomain.ClientListDTO{
 		Clients: make([]*clientDomain.ClientDTO, len(clients)),
 		Total:   total,
 		Limit:   limit,
 		Offset:  offset,
 	}
-	
+
 	for i, client := range clients {
 		response.Clients[i] = &clientDomain.ClientDTO{
 			ID:           client.ID,
@@ -235,12 +249,15 @@ func (h *Handler) List(c *gin.Context) {
 			UpdatedAt:    client.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}
-	
+
+	log.Info().Msg("List clients ended")
 	c.JSON(http.StatusOK, response)
 }
 
 // Count conta clientes
 func (h *Handler) Count(c *gin.Context) {
+	log.Info().Msg("Count clients started")
+
 	tenantID, exists := middleware.GetTenantIDFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -256,8 +273,9 @@ func (h *Handler) Count(c *gin.Context) {
 		})
 		return
 	}
-	
+
+	log.Info().Msg("Count clients ended")
 	c.JSON(http.StatusOK, gin.H{
 		"count": count,
 	})
-} 
+}
