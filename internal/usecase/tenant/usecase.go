@@ -25,9 +25,9 @@ func NewUseCase(repo tenant.Repository) UseCaseInterface {
 
 func (u *UseCase) Create(ctx context.Context, dto *tenant.CreateTenantDTO) (*tenant.TenantDTO, error) {
 	tenantEntity := &tenant.Tenant{
-		Name:     dto.Name,
-		Plan:     dto.Plan,
-		IsActive: true,
+		CompanyName: dto.CompanyName,
+		Plan:        dto.Plan,
+		IsActive:    true,
 	}
 
 	if err := u.repo.Create(ctx, tenantEntity); err != nil {
@@ -52,11 +52,11 @@ func (u *UseCase) Update(ctx context.Context, id string, dto *tenant.UpdateTenan
 		return nil, err
 	}
 
-	if dto.Name != "" {
-		tenantEntity.Name = dto.Name
+	if *dto.CompanyName != "" {
+		tenantEntity.CompanyName = *dto.CompanyName
 	}
-	if dto.Plan != "" {
-		tenantEntity.Plan = dto.Plan
+	if dto.Plan != nil && *dto.Plan != "" {
+		tenantEntity.Plan = *dto.Plan
 	}
 	if dto.IsActive != nil {
 		tenantEntity.IsActive = *dto.IsActive
@@ -103,11 +103,11 @@ func (u *UseCase) Count(ctx context.Context) (int, error) {
 
 func (u *UseCase) entityToDTO(entity *tenant.Tenant) *tenant.TenantDTO {
 	return &tenant.TenantDTO{
-		ID:        entity.ID,
-		Name:      entity.Name,
-		Plan:      entity.Plan,
-		IsActive:  entity.IsActive,
-		CreatedAt: entity.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: entity.UpdatedAt.Format(time.RFC3339),
+		ID:          entity.ID,
+		CompanyName: entity.CompanyName,
+		Plan:        entity.Plan,
+		IsActive:    entity.IsActive,
+		CreatedAt:   entity.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   entity.UpdatedAt.Format(time.RFC3339),
 	}
 }

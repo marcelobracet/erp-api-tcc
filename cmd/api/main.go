@@ -77,7 +77,7 @@ func setupRouter(container *container.Container) *gin.Engine {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{
 		"http://localhost:3000",
-		"http://localhost:3001", 
+		"http://localhost:3001",
 		"http://localhost:5173",
 		"http://127.0.0.1:3000",
 		"http://127.0.0.1:3001",
@@ -170,26 +170,26 @@ func setupRouter(container *container.Container) *gin.Engine {
 			"status": "ok",
 			"time":   time.Now().Format(time.RFC3339),
 		})
-	})	
+	})
 
 	router.GET("/health/readiness", func(c *gin.Context) {
 		db, err := container.DB.DB()
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status": "error",
+				"status":  "error",
 				"message": "Database connection failed",
 			})
 			return
 		}
-	
+
 		if err := db.PingContext(context.Background()); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status": "error",
-				"message": "Database connection failed", 
+				"status":  "error",
+				"message": "Database connection failed",
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
 			"time":   time.Now().Format(time.RFC3339),

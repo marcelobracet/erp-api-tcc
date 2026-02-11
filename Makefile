@@ -1,5 +1,8 @@
+build:
+	go build ./... 
+
 test:
-	go test ./...
+	go test ./... -v
 
 test-coverage:
 	go test ./... -coverprofile=coverage.out
@@ -7,5 +10,6 @@ test-coverage:
 
 test-watch:
 	reflex -r '\.go$$' make test
+
 
 	

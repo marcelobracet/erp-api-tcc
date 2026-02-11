@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	ID           string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID     string         `json:"tenant_id" gorm:"not null"`
+	TenantID     string         `json:"tenant_id" gorm:"type:uuid;not null"`
 	Email        string         `json:"email" gorm:"uniqueIndex;not null"`
 	Password     string         `json:"-" gorm:"column:password_hash;not null"`
 	Name         string         `json:"name" gorm:"not null"`

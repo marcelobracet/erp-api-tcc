@@ -13,7 +13,8 @@ import (
 	settingsDomain "erp-api/internal/domain/settings"
 	tenantDomain "erp-api/internal/domain/tenant"
 	userDomain "erp-api/internal/domain/user"
-	"erp-api/internal/infra/repository"
+	"erp-api/internal/infra/database"
+	"erp-api/internal/infra/factory"
 	clientUseCase "erp-api/internal/usecase/client"
 	productUseCase "erp-api/internal/usecase/product"
 	quoteUseCase "erp-api/internal/usecase/quote"
@@ -22,28 +23,33 @@ import (
 	userUseCase "erp-api/internal/usecase/user"
 	"erp-api/pkg/auth"
 
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type Container struct {
-	DB             *gorm.DB
-	TenantRepo     tenantDomain.Repository
-	TenantUseCase  tenantUseCase.UseCaseInterface
-	UserRepo       userDomain.Repository
-	UserUseCase    userUseCase.UseCaseInterface
-	ClientRepo     clientDomain.Repository
-	ClientUseCase  clientUseCase.UseCaseInterface
-	ProductRepo    productDomain.Repository
-	ProductUseCase productUseCase.UseCaseInterface
-	QuoteRepo      quoteDomain.Repository
-	QuoteItemRepo  quoteDomain.ItemRepository
-	QuoteUseCase   quoteUseCase.UseCaseInterface
-	SettingsRepo   settingsDomain.Repository
+	// Database abstraction
+	Database    database.Database
+	RepoFactory database.RepositoryFactory
+
+	// Legacy GORM DB (kept for backward compatibility with migrations)
+	DB *gorm.DB
+
+	// Repositories
+	TenantRepo      tenantDomain.Repository
+	TenantUseCase   tenantUseCase.UseCaseInterface
+	UserRepo        userDomain.Repository
+	UserUseCase     userUseCase.UseCaseInterface
+	ClientRepo      clientDomain.Repository
+	ClientUseCase   clientUseCase.UseCaseInterface
+	ProductRepo     productDomain.Repository
+	ProductUseCase  productUseCase.UseCaseInterface
+	QuoteRepo       quoteDomain.Repository
+	QuoteItemRepo   quoteDomain.ItemRepository
+	QuoteUseCase    quoteUseCase.UseCaseInterface
+	SettingsRepo    settingsDomain.Repository
 	SettingsUseCase settingsUseCase.UseCaseInterface
-	JWTManager     *auth.JWTManager
-	PassHasher     *auth.PasswordHasher
+	JWTManager      *auth.JWTManager
+	PassHasher      *auth.PasswordHasher
 }
 
 func NewContainer() *Container {
@@ -101,34 +107,64 @@ func (c *Container) initializeDatabase() error {
 		dbSSLMode = "disable"
 	}
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+	config := database.PostgreSQLConfig{
+		Host:     dbHost,
+		Port:     dbPort,
+		User:     dbUser,
+		Password: dbPassword,
+		DBName:   dbName,
+		SSLMode:  dbSSLMode,
+	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
+	var (
+		db      database.Database
+		lastErr error
+	)
+	
+	deadline := time.Now().Add(45 * time.Second)
+	for attempt := 0; time.Now().Before(deadline); attempt++ {
+		candidate := database.NewPostgreSQLDatabase(config)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := candidate.Connect(ctx)
+		if err == nil {
+			err = candidate.Ping(ctx)
+		}
+		cancel()
+
+		if err == nil {
+			db = candidate
+			break
+		}
+
+		_ = candidate.Close()
+		lastErr = err
+
+		backoff := time.Duration(attempt+1) * 250 * time.Millisecond
+		if backoff > 2*time.Second {
+			backoff = 2 * time.Second
+		}
+		time.Sleep(backoff)
+	}
+
+	if db == nil {
+		return fmt.Errorf("failed to connect to database after retries: %w", lastErr)
+	}
+	c.Database = db
+
+	repoFactory, err := factory.NewRepositoryFactory(c.Database)
 	if err != nil {
-		return fmt.Errorf("failed to open database: %w", err)
+		return fmt.Errorf("failed to create repository factory: %w", err)
 	}
+	c.RepoFactory = repoFactory
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get sql.DB: %w", err)
+	gormDB, ok := c.Database.GetDB().(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("failed to get GORM DB instance")
 	}
+	c.DB = gormDB
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := sqlDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetMaxIdleConns(25)
-	sqlDB.SetConnMaxLifetime(5 * time.Minute)
-
-	c.DB = db
-	log.Println("Database initialized successfully")
+	log.Println("Database initialized successfully using Factory Pattern")
 	return nil
 }
 
@@ -139,17 +175,13 @@ func (c *Container) runMigrations() error {
 
 	log.Println("Running database migrations...")
 
-	// Habilitar extensão UUID se necessário
 	if err := c.DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
 		log.Printf("Warning: Could not create uuid-ossp extension: %v", err)
-		// Tentar gen_random_uuid() que é nativo do PostgreSQL 13+
 		if err := c.DB.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"").Error; err != nil {
 			log.Printf("Warning: Could not create pgcrypto extension: %v", err)
 		}
 	}
 
-	// Executar AutoMigrate para todas as entidades na ordem correta
-	// Ordem importa devido às foreign keys
 	err := c.DB.AutoMigrate(
 		&tenantDomain.Tenant{},
 		&userDomain.User{},
@@ -320,18 +352,20 @@ func (c *Container) createGeneratedColumnsAndIndexes() {
 }
 
 func (c *Container) initializeRepositories() error {
-	if c.DB == nil {
-		return fmt.Errorf("database not initialized")
+	if c.RepoFactory == nil {
+		return fmt.Errorf("repository factory not initialized")
 	}
 
-	c.TenantRepo = repository.NewTenantRepository(c.DB)
-	c.UserRepo = repository.NewUserRepository(c.DB)
-	c.ClientRepo = repository.NewClientRepository(c.DB)
-	c.ProductRepo = repository.NewProductRepository(c.DB)
-	c.QuoteRepo = repository.NewQuoteRepository(c.DB)
-	c.QuoteItemRepo = repository.NewQuoteItemRepository(c.DB)
-	c.SettingsRepo = repository.NewSettingsRepository(c.DB)
-	log.Println("Repositories initialized successfully")
+	// Use factory to create all repositories
+	c.TenantRepo = c.RepoFactory.CreateTenantRepository()
+	c.UserRepo = c.RepoFactory.CreateUserRepository()
+	c.ClientRepo = c.RepoFactory.CreateClientRepository()
+	c.ProductRepo = c.RepoFactory.CreateProductRepository()
+	c.QuoteRepo = c.RepoFactory.CreateQuoteRepository()
+	c.QuoteItemRepo = c.RepoFactory.CreateQuoteItemRepository()
+	c.SettingsRepo = c.RepoFactory.CreateSettingsRepository()
+
+	log.Println("Repositories initialized successfully using Factory Pattern")
 	return nil
 }
 
@@ -385,6 +419,10 @@ func (c *Container) initializeAuth() error {
 }
 
 func (c *Container) Close() error {
+	if c.Database != nil {
+		return c.Database.Close()
+	}
+	// Fallback to legacy DB if Database is not set
 	if c.DB != nil {
 		sqlDB, err := c.DB.DB()
 		if err != nil {
@@ -453,4 +491,4 @@ func (c *Container) GetJWTManager() *auth.JWTManager {
 
 func (c *Container) GetPassHasher() *auth.PasswordHasher {
 	return c.PassHasher
-} 
+}

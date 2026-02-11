@@ -68,7 +68,7 @@ func (u *UseCase) Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (
 			QuoteID:   newQuote.ID,
 			ProductID: itemDTO.ProductID,
 			Quantity:  itemDTO.Quantity,
-			Price:     itemDTO.Price,
+			UnitPrice: itemDTO.Price,
 		}
 
 		err = u.itemRepo.Create(ctx, item)
@@ -103,9 +103,6 @@ func (u *UseCase) Update(ctx context.Context, tenantID, id string, req *quoteDom
 	}
 	if req.Status != "" {
 		quote.Status = req.Status
-	}
-	if req.ConversionRate != nil {
-		quote.ConversionRate = req.ConversionRate
 	}
 	if req.Notes != "" {
 		quote.Notes = req.Notes

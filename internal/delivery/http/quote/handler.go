@@ -32,10 +32,10 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	var req quoteDomain.CreateQuoteDTO
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
@@ -48,7 +48,7 @@ func (h *Handler) Create(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	quote, err := h.quoteUseCase.Create(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
@@ -71,7 +71,7 @@ func (h *Handler) Create(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, quote)
 }
 
@@ -86,7 +86,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	
+
 	quote, err := h.quoteUseCase.GetByID(c.Request.Context(), tenantID, id)
 	if err != nil {
 		switch err {
@@ -101,7 +101,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, quote)
 }
 
@@ -117,15 +117,15 @@ func (h *Handler) Update(c *gin.Context) {
 
 	id := c.Param("id")
 	var req quoteDomain.UpdateQuoteDTO
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	quote, err := h.quoteUseCase.Update(c.Request.Context(), tenantID, id, &req)
 	if err != nil {
 		switch err {
@@ -140,7 +140,7 @@ func (h *Handler) Update(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, quote)
 }
 
@@ -155,7 +155,7 @@ func (h *Handler) Delete(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	
+
 	err := h.quoteUseCase.Delete(c.Request.Context(), tenantID, id)
 	if err != nil {
 		switch err {
@@ -170,7 +170,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -186,7 +186,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	limitStr := c.DefaultQuery("limit", "10")
 	offsetStr := c.DefaultQuery("offset", "0")
-	
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -194,7 +194,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -202,7 +202,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	quotes, err := h.quoteUseCase.List(c.Request.Context(), tenantID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -210,7 +210,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	total, err := h.quoteUseCase.Count(c.Request.Context(), tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -218,30 +218,29 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	response := quoteDomain.QuoteListDTO{
 		Quotes: make([]*quoteDomain.QuoteDTO, len(quotes)),
 		Total:  total,
 		Limit:  limit,
 		Offset: offset,
 	}
-	
+
 	for i, quote := range quotes {
 		response.Quotes[i] = &quoteDomain.QuoteDTO{
-			ID:             quote.ID,
-			TenantID:       quote.TenantID,
-			ClientID:       quote.ClientID,
-			UserID:         quote.UserID,
-			TotalValue:     quote.TotalValue,
-			Discount:       quote.Discount,
-			Status:         quote.Status,
-			ConversionRate: quote.ConversionRate,
-			Notes:          quote.Notes,
-			CreatedAt:      quote.CreatedAt.Format("2006-01-02T15:04:05Z"),
-			UpdatedAt:      quote.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+			ID:         quote.ID,
+			TenantID:   quote.TenantID,
+			ClientID:   quote.ClientID,
+			UserID:     quote.UserID,
+			TotalValue: quote.TotalValue,
+			Discount:   quote.Discount,
+			Status:     quote.Status,
+			Notes:      quote.Notes,
+			CreatedAt:  quote.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			UpdatedAt:  quote.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -262,7 +261,7 @@ func (h *Handler) Count(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"count": count,
 	})
@@ -280,15 +279,15 @@ func (h *Handler) UpdateStatus(c *gin.Context) {
 
 	id := c.Param("id")
 	var req quoteDomain.UpdateQuoteStatusDTO
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	err := h.quoteUseCase.UpdateStatus(c.Request.Context(), tenantID, id, &req)
 	if err != nil {
 		switch err {
@@ -307,8 +306,8 @@ func (h *Handler) UpdateStatus(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Quote status updated successfully",
 	})
-} 
+}

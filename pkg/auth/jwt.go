@@ -16,14 +16,12 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// JWTManager gerencia a criação e validação de tokens JWT
 type JWTManager struct {
 	secretKey     string
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
 }
 
-// NewJWTManager cria uma nova instância do JWTManager
 func NewJWTManager(secretKey string, accessExpiry, refreshExpiry time.Duration) *JWTManager {
 	return &JWTManager{
 		secretKey:     secretKey,
@@ -32,7 +30,6 @@ func NewJWTManager(secretKey string, accessExpiry, refreshExpiry time.Duration) 
 	}
 }
 
-// GenerateAccessToken gera um token de acesso
 func (j *JWTManager) GenerateAccessToken(userID, tenantID, email, role string) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
@@ -52,7 +49,6 @@ func (j *JWTManager) GenerateAccessToken(userID, tenantID, email, role string) (
 	return token.SignedString([]byte(j.secretKey))
 }
 
-// GenerateRefreshToken gera um token de refresh
 func (j *JWTManager) GenerateRefreshToken(userID, tenantID, email, role string) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
@@ -72,7 +68,6 @@ func (j *JWTManager) GenerateRefreshToken(userID, tenantID, email, role string) 
 	return token.SignedString([]byte(j.secretKey))
 }
 
-// ValidateToken valida um token JWT e retorna as claims
 func (j *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -92,7 +87,6 @@ func (j *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 
-// RefreshAccessToken gera um novo token de acesso usando um refresh token
 func (j *JWTManager) RefreshAccessToken(refreshToken string) (string, error) {
 	claims, err := j.ValidateToken(refreshToken)
 	if err != nil {
@@ -107,7 +101,6 @@ type TokenPair struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-// GenerateTokenPair gera um par de tokens (access + refresh)
 func (j *JWTManager) GenerateTokenPair(userID, tenantID, email, role string) (*TokenPair, error) {
 	accessToken, err := j.GenerateAccessToken(userID, tenantID, email, role)
 	if err != nil {
@@ -123,4 +116,4 @@ func (j *JWTManager) GenerateTokenPair(userID, tenantID, email, role string) (*T
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
-} 
+}

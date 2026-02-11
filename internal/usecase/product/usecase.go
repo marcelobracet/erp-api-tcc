@@ -57,12 +57,12 @@ func (u *UseCase) GetByID(ctx context.Context, tenantID, id string) (*productDom
 }
 
 func (u *UseCase) Update(ctx context.Context, tenantID, id string, req *productDomain.UpdateProductDTO) (*productDomain.Product, error) {
-	// Buscar produto existente (já filtra por tenant_id)
 	product, err := u.productRepo.GetByID(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
 
+	//TODO: Do WithName, WithDescription, WithPrice, WithStock, WithSKU, WithCategory, WithImageURL, WithIsActive
 	// Atualizar campos
 	if req.Name != "" {
 		product.Name = req.Name

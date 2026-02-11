@@ -1,21 +1,41 @@
 package tenant
 
 type CreateTenantDTO struct {
-	Name string `json:"name" binding:"required"`
-	Plan string `json:"plan,omitempty"`
+	CompanyName string `json:"company_name" binding:"required,min=2"`
+	TradeName   string `json:"trade_name,omitempty"`
+	CNPJ        string `json:"cnpj,omitempty"`
+	Email       string `json:"email,omitempty" binding:"omitempty,email"`
+	Phone       string `json:"phone,omitempty"`
+
+	Plan string `json:"plan,omitempty"` // default: free
 }
 
 type UpdateTenantDTO struct {
-	Name     string `json:"name,omitempty"`
-	Plan     string `json:"plan,omitempty"`
-	IsActive *bool  `json:"is_active,omitempty"`
-}
+	CompanyName *string `json:"company_name,omitempty"`
+	TradeName   *string `json:"trade_name,omitempty"`
+	CNPJ        *string `json:"cnpj,omitempty"`
+	Email       *string `json:"email,omitempty" binding:"omitempty,email"`
+	Phone       *string `json:"phone,omitempty"`
 
+	Plan     *string `json:"plan,omitempty"`
+	Status   *string `json:"status,omitempty"` // active | suspended | canceled
+	IsActive *bool   `json:"is_active,omitempty"`
+}
 type TenantDTO struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Plan      string `json:"plan"`
-	IsActive  bool   `json:"is_active"`
+	ID string `json:"id"`
+
+	CompanyName  string `json:"company_name"`
+	TradeName    string `json:"trade_name,omitempty"`
+	CNPJ         string `json:"cnpj,omitempty"`
+	BusinessType string `json:"business_type"`
+
+	Email string `json:"email,omitempty"`
+	Phone string `json:"phone,omitempty"`
+
+	Plan     string `json:"plan"`
+	Status   string `json:"status"`
+	IsActive bool   `json:"is_active"`
+
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }

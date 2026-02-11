@@ -2,8 +2,6 @@ package quote
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type QuoteStatus string
@@ -16,28 +14,47 @@ const (
 )
 
 type Quote struct {
-	ID             string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID       string         `json:"tenant_id" gorm:"not null"`
-	ClientID       string         `json:"client_id" gorm:"not null"`
-	UserID         string         `json:"user_id" gorm:"not null"`
-	TotalValue     float64        `json:"total_value" gorm:"default:0"`
-	Discount       float64        `json:"discount" gorm:"default:0"`
-	Status         QuoteStatus    `json:"status" gorm:"default:'pending'"`
-	ConversionRate *float64       `json:"conversion_rate,omitempty"`
-	Notes          string         `json:"notes,omitempty"`
-	CreatedAt      time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt      time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
+	ID       string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TenantID string `json:"tenant_id"`
+	ClientID string `json:"client_id"`
+	UserID   string `json:"user_id"`
+
+	Subtotal   float64 `json:"subtotal"`
+	Discount   float64 `json:"discount"`
+	TotalValue float64 `json:"total_value"`
+
+	Status QuoteStatus `json:"status"`
+	Notes  string      `json:"notes,omitempty"`
+
+	ApprovedAt *time.Time `json:"approved_at,omitempty"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type QuoteItem struct {
-	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID  string    `json:"tenant_id" gorm:"not null"`
-	QuoteID   string    `json:"quote_id" gorm:"not null"`
-	ProductID string    `json:"product_id" gorm:"not null"`
-	Quantity  int       `json:"quantity" gorm:"not null;default:1"`
-	Price     float64   `json:"price" gorm:"not null"`
-	Total     float64   `json:"total" gorm:"->"`
+	ID        string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TenantID  string `json:"tenant_id" gorm:"type:uuid;not null"`
+	QuoteID   string `json:"quote_id" gorm:"type:uuid;not null"`
+	ProductID string `json:"product_id" gorm:"type:uuid;not null"`
+
+	// Medidas
+	WidthCM   float64 `json:"width_cm,omitempty"`  // largura
+	HeightCM  float64 `json:"height_cm,omitempty"` // altura
+	Thickness float64 `json:"thickness,omitempty"` // espessura
+	AreaM2    float64 `json:"area_m2,omitempty"`   // calculado
+
+	// Preço
+	UnitPrice float64 `json:"unit_price" gorm:"not null"` // preço por m² ou unitário
+	Quantity  int     `json:"quantity" gorm:"default:1"`
+	Total     float64 `json:"total"` // calculado
+
+	// Extras
+	EdgeType       string `json:"edge_type,omitempty"` // borda
+	HasCutout      bool   `json:"has_cutout" gorm:"default:false"`
+	ReferenceImage string `json:"reference_image,omitempty"`
+	Notes          string `json:"notes,omitempty"`
+
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
