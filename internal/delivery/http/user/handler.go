@@ -37,15 +37,15 @@ func NewHandler(userUseCase userUseCase.UseCaseInterface) *Handler {
 // @Router /users/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req userDomain.CreateUserRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	user, err := h.userUseCase.Register(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
@@ -60,7 +60,7 @@ func (h *Handler) Register(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, user)
 }
 
@@ -77,15 +77,15 @@ func (h *Handler) Register(c *gin.Context) {
 // @Router /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req userDomain.LoginRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	response, err := h.userUseCase.Login(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
@@ -104,7 +104,7 @@ func (h *Handler) Login(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -121,15 +121,15 @@ func (h *Handler) Login(c *gin.Context) {
 // @Router /auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req userDomain.RefreshTokenRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	response, err := h.userUseCase.RefreshToken(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
@@ -148,7 +148,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -164,7 +164,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 // @Router /users/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	user, err := h.userUseCase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		switch err {
@@ -179,7 +179,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, user)
 }
 
@@ -253,16 +253,16 @@ func (h *Handler) GetProfile(c *gin.Context) {
 // @Router /users/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	var req userDomain.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	user, err := h.userUseCase.Update(c.Request.Context(), id, &req)
 	if err != nil {
 		switch err {
@@ -277,7 +277,7 @@ func (h *Handler) Update(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, user)
 }
 
@@ -293,7 +293,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Router /users/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	err := h.userUseCase.Delete(c.Request.Context(), id)
 	if err != nil {
 		switch err {
@@ -308,7 +308,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -325,17 +325,17 @@ func (h *Handler) Delete(c *gin.Context) {
 func (h *Handler) List(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "10")
 	offsetStr := c.DefaultQuery("offset", "0")
-	
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		limit = 10
 	}
-	
+
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil || offset < 0 {
 		offset = 0
 	}
-	
+
 	users, err := h.userUseCase.List(c.Request.Context(), limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -343,7 +343,7 @@ func (h *Handler) List(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, users)
 }
 
@@ -363,8 +363,8 @@ func (h *Handler) Count(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"count": count,
 	})
-} 
+}
