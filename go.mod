@@ -1,10 +1,9 @@
 module erp-api
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.24.0
 
 require (
+	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.2.0
@@ -16,12 +15,14 @@ require (
 )
 
 require (
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/tiendc/go-deepcopy v1.6.0 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.1 // indirect
+	golang.org/x/oauth2 v0.28.0 // indirect
 )
 
 require (

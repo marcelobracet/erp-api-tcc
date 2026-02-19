@@ -3,15 +3,15 @@ package user
 import "time"
 
 type UserDAO struct {
-	ID           string     `db:"id"`
-	TenantID     string     `db:"tenant_id"`
-	Email        string     `db:"email"`
-	Password     string     `db:"password"`
-	Name         string     `db:"name"`
-	Role         string     `db:"role"`
-	IsActive     bool       `db:"is_active"`
-	CreatedAt    time.Time  `db:"created_at"`
-	UpdatedAt    time.Time  `db:"updated_at"`
+	ID        string    `db:"id"`
+	TenantID  string    `db:"tenant_id"`
+	Email     string    `db:"email"`
+	Password  string    `db:"password"`
+	Name      string    `db:"name"`
+	Role      string    `db:"role"`
+	IsActive  bool      `db:"is_active"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 func (dao *UserDAO) ToEntity() *User {
@@ -26,7 +26,7 @@ func (dao *UserDAO) ToEntity() *User {
 		CreatedAt: dao.CreatedAt,
 		UpdatedAt: dao.UpdatedAt,
 	}
-	
+
 	return user
 }
 
@@ -42,21 +42,27 @@ func (user *User) ToDAO() *UserDAO {
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 	}
-	
+
 	return dao
 }
 
 func (user *User) ToDTO() *UserDTO {
-	dto := &UserDTO{
-		ID:        user.ID,
-		Email:     user.Email,
-		Name:      user.Name,
-		Role:      user.Role,
-		IsActive:  user.IsActive,
-		CreatedAt: user.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: user.UpdatedAt.Format(time.RFC3339),
+	var lastLoginAt string
+	if user.LastLoginAt != nil {
+		lastLoginAt = user.LastLoginAt.Format(time.RFC3339)
 	}
-	
+
+	dto := &UserDTO{
+		ID:          user.ID,
+		Email:       user.Email,
+		Name:        user.Name,
+		Role:        user.Role,
+		IsActive:    user.IsActive,
+		CreatedAt:   user.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   user.UpdatedAt.Format(time.RFC3339),
+		LastLoginAt: lastLoginAt,
+	}
+
 	return dto
 }
 
@@ -88,4 +94,4 @@ func (dto *RefreshTokenDTO) ToEntity() *RefreshTokenRequest {
 	return &RefreshTokenRequest{
 		RefreshToken: dto.RefreshToken,
 	}
-} 
+}

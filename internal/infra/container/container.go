@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	auditDomain "erp-api/internal/domain/audit"
 	clientDomain "erp-api/internal/domain/client"
 	productDomain "erp-api/internal/domain/product"
 	quoteDomain "erp-api/internal/domain/quote"
@@ -120,7 +121,7 @@ func (c *Container) initializeDatabase() error {
 		db      database.Database
 		lastErr error
 	)
-	
+
 	deadline := time.Now().Add(45 * time.Second)
 	for attempt := 0; time.Now().Before(deadline); attempt++ {
 		candidate := database.NewPostgreSQLDatabase(config)
@@ -182,7 +183,15 @@ func (c *Container) runMigrations() error {
 		}
 	}
 
+	// Compatibilidade: em bases antigas, a coluna tenants.company_name pode não existir.
+	// Se o GORM tentar adicionar como NOT NULL direto, o Postgres falha porque linhas existentes ficam NULL.
+	// Aqui garantimos a coluna, backfill e só então aplicamos NOT NULL.
+	if err := c.ensureTenantCompanyNameColumn(); err != nil {
+		return fmt.Errorf("failed to ensure tenants.company_name: %w", err)
+	}
+
 	err := c.DB.AutoMigrate(
+		&auditDomain.Audit{},
 		&tenantDomain.Tenant{},
 		&userDomain.User{},
 		&clientDomain.Client{},
@@ -204,6 +213,62 @@ func (c *Container) runMigrations() error {
 	return nil
 }
 
+func (c *Container) ensureTenantCompanyNameColumn() error {
+	if c.DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Só executa se a tabela já existir (primeiro deploy ainda não terá nada).
+	// Backfill tenta usar trade_name/email se existirem; caso contrário cai num placeholder.
+	res := c.DB.Exec(`
+		DO $$
+		DECLARE
+			has_trade_name boolean;
+			has_email boolean;
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM information_schema.tables
+				WHERE table_schema = 'public' AND table_name = 'tenants'
+			) THEN
+				IF NOT EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'company_name'
+				) THEN
+					ALTER TABLE tenants ADD COLUMN company_name text;
+				END IF;
+
+				SELECT EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'trade_name'
+				) INTO has_trade_name;
+
+				SELECT EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'email'
+				) INTO has_email;
+
+				-- Preenche nulos/vazios para permitir o NOT NULL.
+				IF has_trade_name AND has_email THEN
+					EXECUTE 'UPDATE tenants SET company_name = COALESCE(NULLIF(trade_name, ''''), NULLIF(email, ''''), ''Legacy Tenant'') WHERE company_name IS NULL OR company_name = ''''';
+				ELSIF has_trade_name THEN
+					EXECUTE 'UPDATE tenants SET company_name = COALESCE(NULLIF(trade_name, ''''), ''Legacy Tenant'') WHERE company_name IS NULL OR company_name = ''''';
+				ELSIF has_email THEN
+					EXECUTE 'UPDATE tenants SET company_name = COALESCE(NULLIF(email, ''''), ''Legacy Tenant'') WHERE company_name IS NULL OR company_name = ''''';
+				ELSE
+					EXECUTE 'UPDATE tenants SET company_name = ''Legacy Tenant'' WHERE company_name IS NULL OR company_name = ''''';
+				END IF;
+
+				ALTER TABLE tenants ALTER COLUMN company_name SET NOT NULL;
+			END IF;
+		END $$;
+	`)
+	return res.Error
+}
+
 func (c *Container) createForeignKeys() {
 	c.DB.Exec(`
 		DO $$ 
@@ -213,6 +278,30 @@ func (c *Container) createForeignKeys() {
 			) THEN
 				ALTER TABLE users ADD CONSTRAINT fk_users_tenant 
 				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_audits_tenant'
+			) THEN
+				ALTER TABLE audits ADD CONSTRAINT fk_audits_tenant 
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+			END IF;
+		END $$;
+	`)
+
+	c.DB.Exec(`
+		DO $$ 
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'fk_audits_user'
+			) THEN
+				ALTER TABLE audits ADD CONSTRAINT fk_audits_user 
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 			END IF;
 		END $$;
 	`)

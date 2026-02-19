@@ -65,16 +65,16 @@ func (m *MockRepository) List(ctx context.Context, limit, offset int) ([]*User, 
 	for _, user := range m.users {
 		users = append(users, user)
 	}
-	
+
 	if offset >= len(users) {
 		return []*User{}, nil
 	}
-	
+
 	end := offset + limit
 	if end > len(users) {
 		end = len(users)
 	}
-	
+
 	return users[offset:end], nil
 }
 
@@ -88,7 +88,7 @@ func (m *MockRepository) UpdateLastLogin(ctx context.Context, id string) error {
 		return ErrUserNotFound
 	}
 	now := time.Now()
-	user.ToDTO().LastLoginAt = now.Format(time.RFC3339)
+	user.LastLoginAt = &now
 	user.UpdatedAt = now
 	return nil
 }
@@ -96,7 +96,7 @@ func (m *MockRepository) UpdateLastLogin(ctx context.Context, id string) error {
 func TestMockRepository_Create(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	user := &User{
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -104,20 +104,20 @@ func TestMockRepository_Create(t *testing.T) {
 		Role:     "user",
 		IsActive: true,
 	}
-	
+
 	err := repo.Create(ctx, user)
 	if err != nil {
 		t.Errorf("Create() error = %v", err)
 	}
-	
+
 	if user.ID == "" {
 		t.Error("Expected user ID to be set")
 	}
-	
+
 	if user.CreatedAt.IsZero() {
 		t.Error("Expected CreatedAt to be set")
 	}
-	
+
 	if user.UpdatedAt.IsZero() {
 		t.Error("Expected UpdatedAt to be set")
 	}
@@ -126,7 +126,7 @@ func TestMockRepository_Create(t *testing.T) {
 func TestMockRepository_GetByID(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	user := &User{
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -134,21 +134,21 @@ func TestMockRepository_GetByID(t *testing.T) {
 		Role:     "user",
 		IsActive: true,
 	}
-	
+
 	err := repo.Create(ctx, user)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
-	
+
 	found, err := repo.GetByID(ctx, user.ID)
 	if err != nil {
 		t.Errorf("GetByID() error = %v", err)
 	}
-	
+
 	if found.Email != user.Email {
 		t.Errorf("Expected email %s, got %s", user.Email, found.Email)
 	}
-	
+
 	_, err = repo.GetByID(ctx, "non-existent-id")
 	if err != ErrUserNotFound {
 		t.Errorf("Expected ErrUserNotFound, got %v", err)
@@ -158,7 +158,7 @@ func TestMockRepository_GetByID(t *testing.T) {
 func TestMockRepository_GetByEmail(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	user := &User{
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -166,21 +166,21 @@ func TestMockRepository_GetByEmail(t *testing.T) {
 		Role:     "user",
 		IsActive: true,
 	}
-	
+
 	err := repo.Create(ctx, user)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
-	
+
 	found, err := repo.GetByEmail(ctx, user.Email)
 	if err != nil {
 		t.Errorf("GetByEmail() error = %v", err)
 	}
-	
+
 	if found.ID != user.ID {
 		t.Errorf("Expected ID %s, got %s", user.ID, found.ID)
 	}
-	
+
 	_, err = repo.GetByEmail(ctx, "nonexistent@example.com")
 	if err != ErrUserNotFound {
 		t.Errorf("Expected ErrUserNotFound, got %v", err)
@@ -190,7 +190,7 @@ func TestMockRepository_GetByEmail(t *testing.T) {
 func TestMockRepository_Update(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	user := &User{
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -198,23 +198,23 @@ func TestMockRepository_Update(t *testing.T) {
 		Role:     "user",
 		IsActive: true,
 	}
-	
+
 	err := repo.Create(ctx, user)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
-	
+
 	user.Name = "Updated User"
 	err = repo.Update(ctx, user)
 	if err != nil {
 		t.Errorf("Update() error = %v", err)
 	}
-	
+
 	found, err := repo.GetByID(ctx, user.ID)
 	if err != nil {
 		t.Errorf("GetByID() error = %v", err)
 	}
-	
+
 	if found.Name != "Updated User" {
 		t.Errorf("Expected name 'Updated User', got '%s'", found.Name)
 	}
@@ -223,7 +223,7 @@ func TestMockRepository_Update(t *testing.T) {
 func TestMockRepository_Delete(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	user := &User{
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -231,17 +231,17 @@ func TestMockRepository_Delete(t *testing.T) {
 		Role:     "user",
 		IsActive: true,
 	}
-	
+
 	err := repo.Create(ctx, user)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
-	
+
 	err = repo.Delete(ctx, user.ID)
 	if err != nil {
 		t.Errorf("Delete() error = %v", err)
 	}
-	
+
 	_, err = repo.GetByID(ctx, user.ID)
 	if err != ErrUserNotFound {
 		t.Errorf("Expected ErrUserNotFound after delete, got %v", err)
@@ -251,43 +251,43 @@ func TestMockRepository_Delete(t *testing.T) {
 func TestMockRepository_List(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	users := []*User{
 		{Email: "user1@example.com", Password: "pass1", Name: "User 1", Role: "user"},
 		{Email: "user2@example.com", Password: "pass2", Name: "User 2", Role: "user"},
 		{Email: "user3@example.com", Password: "pass3", Name: "User 3", Role: "user"},
 	}
-	
+
 	for _, user := range users {
 		err := repo.Create(ctx, user)
 		if err != nil {
 			t.Fatalf("Failed to create user: %v", err)
 		}
 	}
-	
+
 	found, err := repo.List(ctx, 10, 0)
 	if err != nil {
 		t.Errorf("List() error = %v", err)
 	}
-	
+
 	if len(found) != 3 {
 		t.Errorf("Expected 3 users, got %d", len(found))
 	}
-	
+
 	found, err = repo.List(ctx, 2, 0)
 	if err != nil {
 		t.Errorf("List() with limit error = %v", err)
 	}
-	
+
 	if len(found) != 2 {
 		t.Errorf("Expected 2 users with limit, got %d", len(found))
 	}
-	
+
 	found, err = repo.List(ctx, 2, 1)
 	if err != nil {
 		t.Errorf("List() with offset error = %v", err)
 	}
-	
+
 	if len(found) != 2 {
 		t.Errorf("Expected 2 users with offset, got %d", len(found))
 	}
@@ -296,34 +296,34 @@ func TestMockRepository_List(t *testing.T) {
 func TestMockRepository_Count(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	users := []*User{
 		{Email: "user1@example.com", Password: "pass1", Name: "User 1", Role: "user"},
 		{Email: "user2@example.com", Password: "pass2", Name: "User 2", Role: "user"},
 	}
-	
+
 	for _, user := range users {
 		err := repo.Create(ctx, user)
 		if err != nil {
 			t.Fatalf("Failed to create user: %v", err)
 		}
 	}
-	
+
 	count, err := repo.Count(ctx)
 	if err != nil {
 		t.Errorf("Count() error = %v", err)
 	}
-	
+
 	if count != 2 {
 		t.Errorf("Expected count 2, got %d", count)
 	}
-	
+
 	emptyRepo := NewMockRepository()
 	count, err = emptyRepo.Count(ctx)
 	if err != nil {
 		t.Errorf("Count() empty repo error = %v", err)
 	}
-	
+
 	if count != 0 {
 		t.Errorf("Expected count 0 for empty repo, got %d", count)
 	}
@@ -332,7 +332,7 @@ func TestMockRepository_Count(t *testing.T) {
 func TestMockRepository_UpdateLastLogin(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
-	
+
 	user := &User{
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -340,23 +340,23 @@ func TestMockRepository_UpdateLastLogin(t *testing.T) {
 		Role:     "user",
 		IsActive: true,
 	}
-	
+
 	err := repo.Create(ctx, user)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
-	
+
 	err = repo.UpdateLastLogin(ctx, user.ID)
 	if err != nil {
 		t.Errorf("UpdateLastLogin() error = %v", err)
 	}
-	
+
 	found, err := repo.GetByID(ctx, user.ID)
 	if err != nil {
 		t.Errorf("GetByID() error = %v", err)
 	}
-	
+
 	if found.ToDTO().LastLoginAt == "" {
 		t.Error("Expected LastLoginAt to be set")
 	}
-} 
+}

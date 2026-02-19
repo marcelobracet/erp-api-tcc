@@ -17,8 +17,25 @@ services:
       - SERVER_PORT=8080
       - SERVER_HOST=0.0.0.0
       - LOG_LEVEL=info
+      # Billing / Plano único + free trial
+      - TENANT_DEFAULT_PLAN=free
+      - TENANT_FREE_TRIAL_DAYS=14
     depends_on:
       - postgres
+    networks:
+      - erp-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.0
+    command: ["start-dev", "--http-port=8080", "--import-realm"]
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      # (Opcional) Importa automaticamente um realm se existir em ./infrastructure/keycloak
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./infrastructure/keycloak:/opt/keycloak/data/import:ro
     networks:
       - erp-network
 

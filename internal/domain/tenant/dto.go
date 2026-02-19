@@ -24,17 +24,17 @@ type UpdateTenantDTO struct {
 type TenantDTO struct {
 	ID string `json:"id"`
 
-	CompanyName  string `json:"company_name"`
-	TradeName    string `json:"trade_name,omitempty"`
-	CNPJ         string `json:"cnpj,omitempty"`
-	BusinessType string `json:"business_type"`
+	CompanyName string `json:"company_name"`
+	TradeName   string `json:"trade_name,omitempty"`
+	CNPJ        string `json:"cnpj,omitempty"`
 
 	Email string `json:"email,omitempty"`
 	Phone string `json:"phone,omitempty"`
 
-	Plan     string `json:"plan"`
-	Status   string `json:"status"`
-	IsActive bool   `json:"is_active"`
+	Plan        string  `json:"plan"`
+	Status      string  `json:"status"`
+	IsActive    bool    `json:"is_active"`
+	TrialEndsAt *string `json:"trial_ends_at,omitempty"`
 
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`

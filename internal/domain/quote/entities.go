@@ -15,9 +15,9 @@ const (
 
 type Quote struct {
 	ID       string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID string `json:"tenant_id"`
-	ClientID string `json:"client_id"`
-	UserID   string `json:"user_id"`
+	TenantID string `json:"tenant_id" gorm:"type:uuid;not null;index"`
+	ClientID string `json:"client_id" gorm:"type:uuid;not null;index"`
+	UserID   string `json:"user_id" gorm:"type:uuid;not null;index"`
 
 	Subtotal   float64 `json:"subtotal"`
 	Discount   float64 `json:"discount"`
@@ -28,8 +28,8 @@ type Quote struct {
 
 	ApprovedAt *time.Time `json:"approved_at,omitempty"`
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 type QuoteItem struct {

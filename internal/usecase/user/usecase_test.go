@@ -69,16 +69,16 @@ func (m *MockRepository) List(ctx context.Context, limit, offset int) ([]*userDo
 	for _, user := range m.users {
 		users = append(users, user)
 	}
-	
+
 	if offset >= len(users) {
 		return []*userDomain.User{}, nil
 	}
-	
+
 	end := offset + limit
 	if end > len(users) {
 		end = len(users)
 	}
-	
+
 	return users[offset:end], nil
 }
 
@@ -92,7 +92,7 @@ func (m *MockRepository) UpdateLastLogin(ctx context.Context, id string) error {
 		return userDomain.ErrUserNotFound
 	}
 	now := time.Now()
-	user.ToDTO().LastLoginAt = now.Format(time.RFC3339)
+	user.LastLoginAt = &now
 	user.UpdatedAt = now
 	return nil
 }
@@ -101,49 +101,50 @@ func TestUseCase_Register(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	req := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
 		Role:     "user",
 	}
-	
+
 	user, err := useCase.Register(ctx, req)
 	if err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
-	
+
 	if user.Email != req.Email {
 		t.Errorf("Expected email %s, got %s", req.Email, user.Email)
 	}
-	
+
 	if user.Name != req.Name {
 		t.Errorf("Expected name %s, got %s", req.Name, user.Name)
 	}
-	
+
 	if user.Role != req.Role {
 		t.Errorf("Expected role %s, got %s", req.Role, user.Role)
 	}
-	
+
 	if !user.IsActive {
 		t.Error("Expected user to be active")
 	}
-	
+
 	// Verificar se senha foi hasheada
 	if user.Password == req.Password {
 		t.Error("Expected password to be hashed")
 	}
-	
+
 	// Verificar se usuário foi salvo no repositório
 	found, err := repo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		t.Fatalf("GetByEmail() error = %v", err)
 	}
-	
+
 	if found.ID != user.ID {
 		t.Errorf("Expected user ID %s, got %s", user.ID, found.ID)
 	}
@@ -153,31 +154,33 @@ func TestUseCase_Register_DuplicateEmail(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	// Criar primeiro usuário
 	req1 := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
 		Role:     "user",
 	}
-	
+
 	_, err := useCase.Register(ctx, req1)
 	if err != nil {
 		t.Fatalf("First Register() error = %v", err)
 	}
-	
+
 	// Tentar criar segundo usuário com mesmo email
 	req2 := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password456",
 		Name:     "Another User",
 		Role:     "user",
 	}
-	
+
 	_, err = useCase.Register(ctx, req2)
 	if err != userDomain.ErrUserAlreadyExists {
 		t.Errorf("Expected ErrUserAlreadyExists, got %v", err)
@@ -188,42 +191,43 @@ func TestUseCase_Login(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	// Criar usuário primeiro
 	createReq := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
 		Role:     "user",
 	}
-	
+
 	_, err := useCase.Register(ctx, createReq)
 	if err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
-	
+
 	// Fazer login
 	loginReq := &userDomain.LoginRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 	}
-	
+
 	loginResp, err := useCase.Login(ctx, loginReq)
 	if err != nil {
 		t.Fatalf("Login() error = %v", err)
 	}
-	
+
 	if loginResp.AccessToken == "" {
 		t.Error("Expected access token to be generated")
 	}
-	
+
 	if loginResp.RefreshToken == "" {
 		t.Error("Expected refresh token to be generated")
 	}
-	
+
 	if loginResp.User.Email != loginReq.Email {
 		t.Errorf("Expected user email %s, got %s", loginReq.Email, loginResp.User.Email)
 	}
@@ -233,29 +237,30 @@ func TestUseCase_Login_InvalidCredentials(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	// Criar usuário primeiro
 	createReq := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
 		Role:     "user",
 	}
-	
+
 	_, err := useCase.Register(ctx, createReq)
 	if err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
-	
+
 	// Tentar login com senha incorreta
 	loginReq := &userDomain.LoginRequest{
 		Email:    "test@example.com",
 		Password: "wrongpassword",
 	}
-	
+
 	_, err = useCase.Login(ctx, loginReq)
 	if err != userDomain.ErrInvalidCredentials {
 		t.Errorf("Expected ErrInvalidCredentials, got %v", err)
@@ -266,16 +271,16 @@ func TestUseCase_Login_UserNotFound(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	// Tentar login com usuário inexistente
 	loginReq := &userDomain.LoginRequest{
 		Email:    "nonexistent@example.com",
 		Password: "password123",
 	}
-	
+
 	_, err := useCase.Login(ctx, loginReq)
 	if err != userDomain.ErrInvalidCredentials {
 		t.Errorf("Expected ErrInvalidCredentials, got %v", err)
@@ -286,51 +291,52 @@ func TestUseCase_RefreshToken(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	// Criar usuário e fazer login
 	createReq := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
 		Role:     "user",
 	}
-	
+
 	_, err := useCase.Register(ctx, createReq)
 	if err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
-	
+
 	loginReq := &userDomain.LoginRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 	}
-	
+
 	loginResp, err := useCase.Login(ctx, loginReq)
 	if err != nil {
 		t.Fatalf("Login() error = %v", err)
 	}
-	
+
 	// Refresh token
 	refreshReq := &userDomain.RefreshTokenRequest{
 		RefreshToken: loginResp.RefreshToken,
 	}
-	
+
 	refreshResp, err := useCase.RefreshToken(ctx, refreshReq)
 	if err != nil {
 		t.Fatalf("RefreshToken() error = %v", err)
 	}
-	
+
 	if refreshResp.AccessToken == "" {
 		t.Error("Expected new access token to be generated")
 	}
-	
+
 	if refreshResp.RefreshToken != loginResp.RefreshToken {
 		t.Error("Expected refresh token to remain the same")
 	}
-	
+
 	if refreshResp.User.Email != loginResp.User.Email {
 		t.Errorf("Expected user email %s, got %s", loginResp.User.Email, refreshResp.User.Email)
 	}
@@ -340,34 +346,35 @@ func TestUseCase_GetByID(t *testing.T) {
 	repo := NewMockRepository()
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour, 24*time.Hour)
 	passHasher := auth.DefaultPasswordHasher()
-	
+
 	useCase := NewUseCase(repo, jwtManager, passHasher)
 	ctx := context.Background()
-	
+
 	// Criar usuário
 	createReq := &userDomain.CreateUserRequest{
+		TenantID: "tenant-123",
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
 		Role:     "user",
 	}
-	
+
 	createdUser, err := useCase.Register(ctx, createReq)
 	if err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
-	
+
 	// Buscar usuário por ID
 	foundUser, err := useCase.GetByID(ctx, createdUser.ID)
 	if err != nil {
 		t.Fatalf("GetByID() error = %v", err)
 	}
-	
+
 	if foundUser.ID != createdUser.ID {
 		t.Errorf("Expected user ID %s, got %s", createdUser.ID, foundUser.ID)
 	}
-	
+
 	if foundUser.Email != createdUser.Email {
 		t.Errorf("Expected user email %s, got %s", createdUser.Email, foundUser.Email)
 	}
-} 
+}

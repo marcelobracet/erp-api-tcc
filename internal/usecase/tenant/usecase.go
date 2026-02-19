@@ -3,7 +3,16 @@ package tenant
 import (
 	"context"
 	"erp-api/internal/domain/tenant"
+	"os"
+	"strconv"
 	"time"
+)
+
+const (
+	defaultTenantPlanEnvKey   = "TENANT_DEFAULT_PLAN"
+	defaultTenantPlanFallback = "free"
+	freeTrialDaysEnvKey       = "TENANT_FREE_TRIAL_DAYS"
+	freeTrialDaysFallback     = 14
 )
 
 type UseCase struct {
@@ -23,10 +32,52 @@ func NewUseCase(repo tenant.Repository) UseCaseInterface {
 	return &UseCase{repo: repo}
 }
 
+func defaultTenantPlan() string {
+	plan := os.Getenv(defaultTenantPlanEnvKey)
+	if plan == "" {
+		return defaultTenantPlanFallback
+	}
+	return plan
+}
+
+func freeTrialDays() int {
+	val := os.Getenv(freeTrialDaysEnvKey)
+	if val == "" {
+		return freeTrialDaysFallback
+	}
+
+	days, err := strconv.Atoi(val)
+	if err != nil {
+		return freeTrialDaysFallback
+	}
+	if days < 0 {
+		return 0
+	}
+	return days
+}
+
 func (u *UseCase) Create(ctx context.Context, dto *tenant.CreateTenantDTO) (*tenant.TenantDTO, error) {
+	now := time.Now()
+	trialDays := freeTrialDays()
+	plan := defaultTenantPlan()
+
+	var trialEndsAt *time.Time
+	status := tenant.TenantStatusPending
+	if trialDays > 0 {
+		t := now.AddDate(0, 0, trialDays)
+		trialEndsAt = &t
+		status = tenant.TenantStatusActive
+	}
+
 	tenantEntity := &tenant.Tenant{
 		CompanyName: dto.CompanyName,
-		Plan:        dto.Plan,
+		TradeName:   dto.TradeName,
+		CNPJ:        dto.CNPJ,
+		Email:       dto.Email,
+		Phone:       dto.Phone,
+		Plan:        plan,
+		Status:      status,
+		TrialEndsAt: trialEndsAt,
 		IsActive:    true,
 	}
 
@@ -52,12 +103,23 @@ func (u *UseCase) Update(ctx context.Context, id string, dto *tenant.UpdateTenan
 		return nil, err
 	}
 
-	if *dto.CompanyName != "" {
+	if dto.CompanyName != nil {
 		tenantEntity.CompanyName = *dto.CompanyName
 	}
-	if dto.Plan != nil && *dto.Plan != "" {
-		tenantEntity.Plan = *dto.Plan
+	if dto.TradeName != nil {
+		tenantEntity.TradeName = *dto.TradeName
 	}
+	if dto.CNPJ != nil {
+		tenantEntity.CNPJ = *dto.CNPJ
+	}
+	if dto.Email != nil {
+		tenantEntity.Email = *dto.Email
+	}
+	if dto.Phone != nil {
+		tenantEntity.Phone = *dto.Phone
+	}
+	// Plano é único no sistema (configurado via ENV) e não pode ser alterado por request.
+	tenantEntity.Plan = defaultTenantPlan()
 	if dto.IsActive != nil {
 		tenantEntity.IsActive = *dto.IsActive
 	}
@@ -102,11 +164,23 @@ func (u *UseCase) Count(ctx context.Context) (int, error) {
 }
 
 func (u *UseCase) entityToDTO(entity *tenant.Tenant) *tenant.TenantDTO {
+	var trialEndsAt *string
+	if entity.TrialEndsAt != nil {
+		formatted := entity.TrialEndsAt.Format(time.RFC3339)
+		trialEndsAt = &formatted
+	}
+
 	return &tenant.TenantDTO{
 		ID:          entity.ID,
 		CompanyName: entity.CompanyName,
+		TradeName:   entity.TradeName,
+		CNPJ:        entity.CNPJ,
+		Email:       entity.Email,
+		Phone:       entity.Phone,
 		Plan:        entity.Plan,
+		Status:      string(entity.Status),
 		IsActive:    entity.IsActive,
+		TrialEndsAt: trialEndsAt,
 		CreatedAt:   entity.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   entity.UpdatedAt.Format(time.RFC3339),
 	}

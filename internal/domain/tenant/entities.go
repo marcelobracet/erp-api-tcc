@@ -23,9 +23,6 @@ type Tenant struct {
 	TradeName   string `json:"trade_name,omitempty"` // nome fantasia
 	CNPJ        string `json:"cnpj,omitempty" gorm:"index"`
 
-	// Tipo de negócio (controlado, não validado)
-	BusinessType string `json:"business_type" gorm:"default:'marmoraria'"`
-
 	// Contato principal
 	Email string `json:"email,omitempty"`
 	Phone string `json:"phone,omitempty"`

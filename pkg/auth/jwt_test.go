@@ -13,11 +13,11 @@ func TestJWTManager_GenerateAccessToken(t *testing.T) {
 	jwtManager := NewJWTManager(secretKey, accessExpiry, refreshExpiry)
 
 	userID := "user-123"
+	tenantID := "tenant-123"
 	email := "test@example.com"
 	role := "user"
-	provider := "local"
 
-	token, err := jwtManager.GenerateAccessToken(userID, email, role, provider)
+	token, err := jwtManager.GenerateAccessToken(userID, tenantID, email, role)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
@@ -32,6 +32,10 @@ func TestJWTManager_GenerateAccessToken(t *testing.T) {
 
 	if claims.UserID != userID {
 		t.Errorf("Expected UserID %s, got %s", userID, claims.UserID)
+	}
+
+	if claims.TenantID != tenantID {
+		t.Errorf("Expected TenantID %s, got %s", tenantID, claims.TenantID)
 	}
 
 	if claims.Email != email {
@@ -51,11 +55,11 @@ func TestJWTManager_GenerateRefreshToken(t *testing.T) {
 	jwtManager := NewJWTManager(secretKey, accessExpiry, refreshExpiry)
 
 	userID := "user-123"
+	tenantID := "tenant-123"
 	email := "test@example.com"
 	role := "user"
-	provider := "local"
 
-	token, err := jwtManager.GenerateRefreshToken(userID, email, role, provider)
+	token, err := jwtManager.GenerateRefreshToken(userID, tenantID, email, role)
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
@@ -71,6 +75,9 @@ func TestJWTManager_GenerateRefreshToken(t *testing.T) {
 	if claims.UserID != userID {
 		t.Errorf("Expected UserID %s, got %s", userID, claims.UserID)
 	}
+	if claims.TenantID != tenantID {
+		t.Errorf("Expected TenantID %s, got %s", tenantID, claims.TenantID)
+	}
 }
 
 func TestJWTManager_ValidateToken(t *testing.T) {
@@ -81,11 +88,11 @@ func TestJWTManager_ValidateToken(t *testing.T) {
 	jwtManager := NewJWTManager(secretKey, accessExpiry, refreshExpiry)
 
 	userID := "user-123"
+	tenantID := "tenant-123"
 	email := "test@example.com"
 	role := "user"
-	provider := "test-provider"
 
-	token, err := jwtManager.GenerateAccessToken(userID, email, role, provider)
+	token, err := jwtManager.GenerateAccessToken(userID, tenantID, email, role)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}
@@ -96,6 +103,9 @@ func TestJWTManager_ValidateToken(t *testing.T) {
 
 	if claims.UserID != userID {
 		t.Errorf("Expected UserID %s, got %s", userID, claims.UserID)
+	}
+	if claims.TenantID != tenantID {
+		t.Errorf("Expected TenantID %s, got %s", tenantID, claims.TenantID)
 	}
 
 	_, err = jwtManager.ValidateToken("invalid-token")
@@ -112,11 +122,11 @@ func TestJWTManager_RefreshAccessToken(t *testing.T) {
 	jwtManager := NewJWTManager(secretKey, accessExpiry, refreshExpiry)
 
 	userID := "user-123"
+	tenantID := "tenant-123"
 	email := "test@example.com"
 	role := "user"
 
-	deviceID := "test-device-id"
-	refreshToken, err := jwtManager.GenerateRefreshToken(userID, email, role, deviceID)
+	refreshToken, err := jwtManager.GenerateRefreshToken(userID, tenantID, email, role)
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
@@ -137,6 +147,9 @@ func TestJWTManager_RefreshAccessToken(t *testing.T) {
 	if claims.UserID != userID {
 		t.Errorf("Expected UserID %s, got %s", userID, claims.UserID)
 	}
+	if claims.TenantID != tenantID {
+		t.Errorf("Expected TenantID %s, got %s", tenantID, claims.TenantID)
+	}
 }
 
 func TestJWTManager_GenerateTokenPair(t *testing.T) {
@@ -147,11 +160,11 @@ func TestJWTManager_GenerateTokenPair(t *testing.T) {
 	jwtManager := NewJWTManager(secretKey, accessExpiry, refreshExpiry)
 
 	userID := "user-123"
+	tenantID := "tenant-123"
 	email := "test@example.com"
 	role := "user"
 
-	deviceID := "test-device-id"
-	tokenPair, err := jwtManager.GenerateTokenPair(userID, email, role, deviceID)
+	tokenPair, err := jwtManager.GenerateTokenPair(userID, tenantID, email, role)
 	if err != nil {
 		t.Fatalf("GenerateTokenPair() error = %v", err)
 	}
@@ -173,6 +186,9 @@ func TestJWTManager_GenerateTokenPair(t *testing.T) {
 	if claims.UserID != userID {
 		t.Errorf("Expected UserID %s, got %s", userID, claims.UserID)
 	}
+	if claims.TenantID != tenantID {
+		t.Errorf("Expected TenantID %s, got %s", tenantID, claims.TenantID)
+	}
 
 	// Validar refresh token
 	refreshClaims, err := jwtManager.ValidateToken(tokenPair.RefreshToken)
@@ -182,6 +198,9 @@ func TestJWTManager_GenerateTokenPair(t *testing.T) {
 
 	if refreshClaims.UserID != userID {
 		t.Errorf("Expected UserID %s, got %s", userID, refreshClaims.UserID)
+	}
+	if refreshClaims.TenantID != tenantID {
+		t.Errorf("Expected TenantID %s, got %s", tenantID, refreshClaims.TenantID)
 	}
 }
 
@@ -193,11 +212,11 @@ func TestJWTManager_TokenExpiration(t *testing.T) {
 	jwtManager := NewJWTManager(secretKey, accessExpiry, refreshExpiry)
 
 	userID := "user-123"
+	tenantID := "tenant-123"
 	email := "test@example.com"
 	role := "user"
-	deviceID := "test-device-id"
 
-	token, err := jwtManager.GenerateAccessToken(userID, email, role, deviceID)
+	token, err := jwtManager.GenerateAccessToken(userID, tenantID, email, role)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken() error = %v", err)
 	}

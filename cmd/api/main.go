@@ -91,7 +91,7 @@ func setupRouter(container *container.Container) *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	authMiddleware := middleware.NewAuthMiddleware(container.GetJWTManager())
+	authMiddleware := middleware.NewAuthProvider(container.GetJWTManager())
 
 	api := router.Group("/api/v1")
 	{

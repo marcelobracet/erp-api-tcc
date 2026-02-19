@@ -2,6 +2,7 @@ package user
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 
 	userDomain "erp-api/internal/domain/user"
@@ -200,9 +201,28 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	user, err := h.userUseCase.GetByID(c.Request.Context(), userID)
 	if err != nil {
+		if err == userDomain.ErrUserNotFound && os.Getenv("AUTH_PROVIDER") == "keycloak" {
+			tenantID, _ := middleware.GetTenantIDFromContext(c)
+			email, _ := middleware.GetUserEmailFromContext(c)
+			role, _ := middleware.GetUserRoleFromContext(c)
+			if role == "" {
+				role = "user"
+			}
+
+			c.JSON(http.StatusOK, userDomain.User{
+				ID:       userID,
+				TenantID: tenantID,
+				Email:    email,
+				Name:     email,
+				Role:     role,
+				IsActive: true,
+			})
+			return
+		}
+
 		switch err {
 		case userDomain.ErrUserNotFound:
 			c.JSON(http.StatusNotFound, gin.H{
@@ -215,7 +235,7 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		}
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, user)
 }
 

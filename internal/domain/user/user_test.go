@@ -13,8 +13,20 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		errMsg  string
 	}{
 		{
+			name: "missing tenant_id",
+			request: CreateUserRequest{
+				Email:    "test@example.com",
+				Password: "password123",
+				Name:     "Test User",
+				Role:     "user",
+			},
+			wantErr: true,
+			errMsg:  "tenant_id is required",
+		},
+		{
 			name: "valid request",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "test@example.com",
 				Password: "password123",
 				Name:     "Test User",
@@ -25,6 +37,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "missing email",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Password: "password123",
 				Name:     "Test User",
 				Role:     "user",
@@ -35,9 +48,10 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "missing password",
 			request: CreateUserRequest{
-				Email: "test@example.com",
-				Name:  "Test User",
-				Role:  "user",
+				TenantID: "tenant-123",
+				Email:    "test@example.com",
+				Name:     "Test User",
+				Role:     "user",
 			},
 			wantErr: true,
 			errMsg:  "password is required",
@@ -45,6 +59,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "password too short",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "test@example.com",
 				Password: "123",
 				Name:     "Test User",
@@ -56,6 +71,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "missing name",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "test@example.com",
 				Password: "password123",
 				Role:     "user",
@@ -66,6 +82,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "missing role",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "test@example.com",
 				Password: "password123",
 				Name:     "Test User",
@@ -76,6 +93,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "invalid role",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "test@example.com",
 				Password: "password123",
 				Name:     "Test User",
@@ -87,6 +105,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "valid admin role",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "admin@example.com",
 				Password: "password123",
 				Name:     "Admin User",
@@ -97,6 +116,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "valid manager role",
 			request: CreateUserRequest{
+				TenantID: "tenant-123",
 				Email:    "manager@example.com",
 				Password: "password123",
 				Name:     "Manager User",
@@ -109,7 +129,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.request.ValidateCreate()
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ValidateCreate() expected error but got none")
@@ -163,7 +183,7 @@ func TestLoginRequest_ValidateLogin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.request.ValidateLogin()
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ValidateLogin() expected error but got none")
@@ -184,16 +204,16 @@ func TestLoginRequest_ValidateLogin(t *testing.T) {
 func TestUser_Struct(t *testing.T) {
 	now := time.Now()
 	user := User{
-		ID:          "user-123",
-		Email:       "test@example.com",
-		Password:    "hashed_password",
-		Name:        "Test User",
-		Role:        "user",
-		IsActive:    true,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:        "user-123",
+		Email:     "test@example.com",
+		Password:  "hashed_password",
+		Name:      "Test User",
+		Role:      "user",
+		IsActive:  true,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
-	
+
 	userDTO := user.ToDTO()
 	if userDTO.ID != "user-123" {
 		t.Errorf("Expected ID 'user-123', got '%s'", userDTO.ID)
@@ -210,4 +230,4 @@ func TestUser_Struct(t *testing.T) {
 	if !userDTO.IsActive {
 		t.Error("Expected IsActive to be true")
 	}
-} 
+}
