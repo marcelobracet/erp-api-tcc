@@ -33,7 +33,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "missing display_name",
 			request: CreateUserRequest{
-				TenantID: "tenant-123",
+				TenantID:   "tenant-123",
 				KeycloakID: "kc-123",
 			},
 			wantErr: true,
@@ -42,7 +42,7 @@ func TestCreateUserRequest_ValidateCreate(t *testing.T) {
 		{
 			name: "valid request",
 			request: CreateUserRequest{
-				TenantID: "tenant-123",
+				TenantID:    "tenant-123",
 				KeycloakID:  "kc-123",
 				DisplayName: "Test User",
 			},
@@ -80,8 +80,8 @@ func TestUser_Struct(t *testing.T) {
 		TenantID:    "tenant-123",
 		DisplayName: "Test User",
 		Email:       &email,
-		CreatedAt: now,
-		UpdatedAt: now,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	userDTO := user.ToDTO()

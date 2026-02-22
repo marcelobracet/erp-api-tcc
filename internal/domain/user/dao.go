@@ -7,13 +7,13 @@ import (
 )
 
 type UserDAO struct {
-	ID         string  `db:"id"`
-	KeycloakID string  `db:"keycloak_id"`
-	TenantID   string  `db:"tenant_id"`
-	Email      *string `db:"email"`
-	Name       string  `db:"display_name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	ID         string    `db:"id"`
+	KeycloakID string    `db:"keycloak_id"`
+	TenantID   string    `db:"tenant_id"`
+	Email      *string   `db:"email"`
+	Name       string    `db:"display_name"`
+	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
 }
 
 func (dao *UserDAO) ToEntity() *User {
@@ -23,8 +23,8 @@ func (dao *UserDAO) ToEntity() *User {
 		TenantID:    dbtypes.UUID(dao.TenantID),
 		Email:       dao.Email,
 		DisplayName: dao.Name,
-		CreatedAt: dao.CreatedAt,
-		UpdatedAt: dao.UpdatedAt,
+		CreatedAt:   dao.CreatedAt,
+		UpdatedAt:   dao.UpdatedAt,
 	}
 
 	return user
@@ -37,8 +37,8 @@ func (user *User) ToDAO() *UserDAO {
 		TenantID:   string(user.TenantID),
 		Email:      user.Email,
 		Name:       user.DisplayName,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		CreatedAt:  user.CreatedAt,
+		UpdatedAt:  user.UpdatedAt,
 	}
 
 	return dao

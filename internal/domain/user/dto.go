@@ -23,8 +23,8 @@ type UpdateUserDTO struct {
 }
 
 type UserListDTO struct {
-	Users []UserDTO `json:"users"`
-	Total int       `json:"total"`
-	Limit int       `json:"limit"`
-	Offset int      `json:"offset"`
-} 
+	Users  []UserDTO `json:"users"`
+	Total  int       `json:"total"`
+	Limit  int       `json:"limit"`
+	Offset int       `json:"offset"`
+}

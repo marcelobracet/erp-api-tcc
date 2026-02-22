@@ -13,4 +13,4 @@ type UseCaseInterface interface {
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, limit, offset int) ([]*userDomain.User, error)
 	Count(ctx context.Context) (int, error)
-} 
+}

@@ -128,4 +128,4 @@ func (u *UseCase) List(ctx context.Context, tenantID string, limit, offset int) 
 
 func (u *UseCase) Count(ctx context.Context, tenantID string) (int, error) {
 	return u.clientRepo.Count(ctx, tenantID)
-} 
+}

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"erp-api/internal/utils/dbtypes"
+
 	"gorm.io/gorm"
 )
 
@@ -23,7 +24,7 @@ type Client struct {
 	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
-} 
+}
 
 func (c *Client) BeforeCreate(tx *gorm.DB) error {
 	if c.ID == "" {

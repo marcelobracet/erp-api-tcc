@@ -16,14 +16,14 @@ import (
 )
 
 type DBConfig struct {
-	Dialect string
-	Host    string
-	Port    string
-	User    string
+	Dialect  string
+	Host     string
+	Port     string
+	User     string
 	Password string
-	Name    string
-	SSLMode string
-	Params  string
+	Name     string
+	SSLMode  string
+	Params   string
 }
 
 func ReadDBConfigFromEnv() DBConfig {

@@ -170,8 +170,8 @@ func (u *UseCase) entityToDTO(entity *tenant.Tenant) *tenant.TenantDTO {
 		trialEndsAt = &formatted
 	}
 
-		return &tenant.TenantDTO{
-			ID:          string(entity.ID),
+	return &tenant.TenantDTO{
+		ID:          string(entity.ID),
 		CompanyName: entity.CompanyName,
 		TradeName:   entity.TradeName,
 		CNPJ:        entity.CNPJ,

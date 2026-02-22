@@ -15,7 +15,7 @@ func (req *CreateUserRequest) ValidateCreate() error {
 		return errors.New("keycloak_id is required")
 	}
 	if req.DisplayName == "" {
-		return errors.New("display_name is required")	
+		return errors.New("display_name is required")
 	}
 
 	return nil

@@ -56,7 +56,7 @@ func (u *UseCase) Update(ctx context.Context, id string, req *userDomain.UpdateU
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Aplicar atualizações
 	if req.DisplayName != nil {
 		existingUser.DisplayName = *req.DisplayName
@@ -64,15 +64,15 @@ func (u *UseCase) Update(ctx context.Context, id string, req *userDomain.UpdateU
 	if req.Email != nil {
 		existingUser.Email = req.Email
 	}
-	
+
 	existingUser.UpdatedAt = time.Now()
-	
+
 	// Salvar atualizações
 	err = u.userRepo.Update(ctx, existingUser)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return existingUser, nil
 }
 
