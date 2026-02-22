@@ -5,6 +5,7 @@ import (
 	"time"
 
 	clientDomain "erp-api/internal/domain/client"
+	"erp-api/internal/utils/dbtypes"
 )
 
 type UseCaseInterface interface {
@@ -43,7 +44,7 @@ func (u *UseCase) Create(ctx context.Context, req *clientDomain.CreateClientDTO)
 
 	// Criar cliente
 	newClient := &clientDomain.Client{
-		TenantID:     req.TenantID,
+		TenantID:     dbtypes.UUID(req.TenantID),
 		Name:         req.Name,
 		Email:        req.Email,
 		Phone:        req.Phone,

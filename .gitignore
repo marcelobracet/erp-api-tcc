@@ -66,3 +66,9 @@ postgres_data/
 
 # Kubernetes secrets
 k8s/secrets/ 
+
+# Services env
+infrastructure/env/*
+.env
+infrastructure/env/*.env
+!infrastructure/env/*.env.example

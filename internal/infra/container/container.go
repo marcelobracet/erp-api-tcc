@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
-	auditDomain "erp-api/internal/domain/audit"
 	clientDomain "erp-api/internal/domain/client"
 	productDomain "erp-api/internal/domain/product"
 	quoteDomain "erp-api/internal/domain/quote"
@@ -16,6 +16,7 @@ import (
 	userDomain "erp-api/internal/domain/user"
 	"erp-api/internal/infra/database"
 	"erp-api/internal/infra/factory"
+	"erp-api/internal/infra/migrate"
 	clientUseCase "erp-api/internal/usecase/client"
 	productUseCase "erp-api/internal/usecase/product"
 	quoteUseCase "erp-api/internal/usecase/quote"
@@ -81,19 +82,51 @@ func (c *Container) Initialize() error {
 	return nil
 }
 
+// InitializeWithPrewired initializes auth, repositories and use cases assuming
+// the infrastructure has already been wired (Database, RepoFactory and DB).
+//
+// This is used by the IoC composition root in `infrastructure/ioc`.
+func (c *Container) InitializeWithPrewired() error {
+	if c.Database == nil || c.RepoFactory == nil || c.DB == nil {
+		return fmt.Errorf("container prewired dependencies not set")
+	}
+
+	if err := c.initializeAuth(); err != nil {
+		return fmt.Errorf("failed to initialize auth: %w", err)
+	}
+
+	if err := c.initializeRepositories(); err != nil {
+		return fmt.Errorf("failed to initialize repositories: %w", err)
+	}
+
+	if err := c.initializeUseCases(); err != nil {
+		return fmt.Errorf("failed to initialize use cases: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Container) initializeDatabase() error {
+	dialect := strings.ToLower(strings.TrimSpace(os.Getenv("DB_DIALECT")))
+
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 	dbSSLMode := os.Getenv("DB_SSLMODE")
+	dbParams := os.Getenv("DB_PARAMS")
 
 	if dbHost == "" {
 		dbHost = "localhost"
 	}
 	if dbPort == "" {
-		dbPort = "5432"
+		switch dialect {
+		case "mysql":
+			dbPort = "3306"
+		default:
+			dbPort = "5432"
+		}
 	}
 	if dbUser == "" {
 		dbUser = "erp_user"
@@ -108,15 +141,6 @@ func (c *Container) initializeDatabase() error {
 		dbSSLMode = "disable"
 	}
 
-	config := database.PostgreSQLConfig{
-		Host:     dbHost,
-		Port:     dbPort,
-		User:     dbUser,
-		Password: dbPassword,
-		DBName:   dbName,
-		SSLMode:  dbSSLMode,
-	}
-
 	var (
 		db      database.Database
 		lastErr error
@@ -124,7 +148,29 @@ func (c *Container) initializeDatabase() error {
 
 	deadline := time.Now().Add(45 * time.Second)
 	for attempt := 0; time.Now().Before(deadline); attempt++ {
-		candidate := database.NewPostgreSQLDatabase(config)
+		var candidate database.Database
+		switch dialect {
+		case "mysql":
+			candidate = database.NewMySQLDatabase(database.MySQLConfig{
+				Host:     dbHost,
+				Port:     dbPort,
+				User:     dbUser,
+				Password: dbPassword,
+				DBName:   dbName,
+				Params:   dbParams,
+			})
+		case "", "postgres", "postgresql":
+			candidate = database.NewPostgreSQLDatabase(database.PostgreSQLConfig{
+				Host:     dbHost,
+				Port:     dbPort,
+				User:     dbUser,
+				Password: dbPassword,
+				DBName:   dbName,
+				SSLMode:  dbSSLMode,
+			})
+		default:
+			return fmt.Errorf("unsupported DB_DIALECT: %s", dialect)
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		err := candidate.Connect(ctx)
@@ -174,270 +220,17 @@ func (c *Container) runMigrations() error {
 		return fmt.Errorf("database not initialized")
 	}
 
-	log.Println("Running database migrations...")
-
-	if err := c.DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
-		log.Printf("Warning: Could not create uuid-ossp extension: %v", err)
-		if err := c.DB.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"").Error; err != nil {
-			log.Printf("Warning: Could not create pgcrypto extension: %v", err)
-		}
-	}
-
-	// Compatibilidade: em bases antigas, a coluna tenants.company_name pode não existir.
-	// Se o GORM tentar adicionar como NOT NULL direto, o Postgres falha porque linhas existentes ficam NULL.
-	// Aqui garantimos a coluna, backfill e só então aplicamos NOT NULL.
-	if err := c.ensureTenantCompanyNameColumn(); err != nil {
-		return fmt.Errorf("failed to ensure tenants.company_name: %w", err)
-	}
-
-	err := c.DB.AutoMigrate(
-		&auditDomain.Audit{},
-		&tenantDomain.Tenant{},
-		&userDomain.User{},
-		&clientDomain.Client{},
-		&productDomain.Product{},
-		&quoteDomain.Quote{},
-		&quoteDomain.QuoteItem{},
-		&settingsDomain.Settings{},
-	)
-
+	dialect := os.Getenv("DB_DIALECT")
+	migrator, err := migrate.NewMigrator(dialect)
 	if err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
+		return err
 	}
-
-	c.createForeignKeys()
-
-	c.createGeneratedColumnsAndIndexes()
+	if err := migrator.Run(c.DB); err != nil {
+		return err
+	}
 
 	log.Println("Database migrations completed successfully")
 	return nil
-}
-
-func (c *Container) ensureTenantCompanyNameColumn() error {
-	if c.DB == nil {
-		return fmt.Errorf("database not initialized")
-	}
-
-	// Só executa se a tabela já existir (primeiro deploy ainda não terá nada).
-	// Backfill tenta usar trade_name/email se existirem; caso contrário cai num placeholder.
-	res := c.DB.Exec(`
-		DO $$
-		DECLARE
-			has_trade_name boolean;
-			has_email boolean;
-		BEGIN
-			IF EXISTS (
-				SELECT 1
-				FROM information_schema.tables
-				WHERE table_schema = 'public' AND table_name = 'tenants'
-			) THEN
-				IF NOT EXISTS (
-					SELECT 1
-					FROM information_schema.columns
-					WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'company_name'
-				) THEN
-					ALTER TABLE tenants ADD COLUMN company_name text;
-				END IF;
-
-				SELECT EXISTS (
-					SELECT 1
-					FROM information_schema.columns
-					WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'trade_name'
-				) INTO has_trade_name;
-
-				SELECT EXISTS (
-					SELECT 1
-					FROM information_schema.columns
-					WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'email'
-				) INTO has_email;
-
-				-- Preenche nulos/vazios para permitir o NOT NULL.
-				IF has_trade_name AND has_email THEN
-					EXECUTE 'UPDATE tenants SET company_name = COALESCE(NULLIF(trade_name, ''''), NULLIF(email, ''''), ''Legacy Tenant'') WHERE company_name IS NULL OR company_name = ''''';
-				ELSIF has_trade_name THEN
-					EXECUTE 'UPDATE tenants SET company_name = COALESCE(NULLIF(trade_name, ''''), ''Legacy Tenant'') WHERE company_name IS NULL OR company_name = ''''';
-				ELSIF has_email THEN
-					EXECUTE 'UPDATE tenants SET company_name = COALESCE(NULLIF(email, ''''), ''Legacy Tenant'') WHERE company_name IS NULL OR company_name = ''''';
-				ELSE
-					EXECUTE 'UPDATE tenants SET company_name = ''Legacy Tenant'' WHERE company_name IS NULL OR company_name = ''''';
-				END IF;
-
-				ALTER TABLE tenants ALTER COLUMN company_name SET NOT NULL;
-			END IF;
-		END $$;
-	`)
-	return res.Error
-}
-
-func (c *Container) createForeignKeys() {
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_users_tenant'
-			) THEN
-				ALTER TABLE users ADD CONSTRAINT fk_users_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_audits_tenant'
-			) THEN
-				ALTER TABLE audits ADD CONSTRAINT fk_audits_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_audits_user'
-			) THEN
-				ALTER TABLE audits ADD CONSTRAINT fk_audits_user 
-				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_clients_tenant'
-			) THEN
-				ALTER TABLE clients ADD CONSTRAINT fk_clients_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_products_tenant'
-			) THEN
-				ALTER TABLE products ADD CONSTRAINT fk_products_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_tenant'
-			) THEN
-				ALTER TABLE quotes ADD CONSTRAINT fk_quotes_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_client'
-			) THEN
-				ALTER TABLE quotes ADD CONSTRAINT fk_quotes_client 
-				FOREIGN KEY (client_id) REFERENCES clients(id);
-			END IF;
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_user'
-			) THEN
-				ALTER TABLE quotes ADD CONSTRAINT fk_quotes_user 
-				FOREIGN KEY (user_id) REFERENCES users(id);
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quote_items_tenant'
-			) THEN
-				ALTER TABLE quote_items ADD CONSTRAINT fk_quote_items_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quote_items_quote'
-			) THEN
-				ALTER TABLE quote_items ADD CONSTRAINT fk_quote_items_quote 
-				FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE;
-			END IF;
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_quote_items_product'
-			) THEN
-				ALTER TABLE quote_items ADD CONSTRAINT fk_quote_items_product 
-				FOREIGN KEY (product_id) REFERENCES products(id);
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'fk_settings_tenant'
-			) THEN
-				ALTER TABLE settings ADD CONSTRAINT fk_settings_tenant 
-				FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-			END IF;
-		END $$;
-	`)
-}
-
-func (c *Container) createGeneratedColumnsAndIndexes() {
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM information_schema.columns 
-				WHERE table_name = 'quote_items' AND column_name = 'total'
-			) THEN
-				ALTER TABLE quote_items ADD COLUMN total NUMERIC(12,2) 
-				GENERATED ALWAYS AS (quantity * price) STORED;
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_indexes WHERE indexname = 'idx_clients_document_tenant'
-			) THEN
-				CREATE UNIQUE INDEX idx_clients_document_tenant ON clients(document, tenant_id);
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_indexes WHERE indexname = 'idx_settings_key_tenant'
-			) THEN
-				CREATE UNIQUE INDEX idx_settings_key_tenant ON settings(key, tenant_id);
-			END IF;
-		END $$;
-	`)
-
-	c.DB.Exec(`
-		DO $$ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM pg_constraint WHERE conname = 'clients_document_type_check'
-			) THEN
-				ALTER TABLE clients ADD CONSTRAINT clients_document_type_check 
-				CHECK (document_type IN ('CPF', 'CNPJ'));
-			END IF;
-		END $$;
-	`)
 }
 
 func (c *Container) initializeRepositories() error {
@@ -464,7 +257,7 @@ func (c *Container) initializeUseCases() error {
 	}
 
 	c.TenantUseCase = tenantUseCase.NewUseCase(c.TenantRepo)
-	c.UserUseCase = userUseCase.NewUseCase(c.UserRepo, c.JWTManager, c.PassHasher)
+	c.UserUseCase = userUseCase.NewUseCase(c.UserRepo)
 	c.ClientUseCase = clientUseCase.NewUseCase(c.ClientRepo)
 	c.ProductUseCase = productUseCase.NewUseCase(c.ProductRepo)
 	c.QuoteUseCase = quoteUseCase.NewUseCase(c.QuoteRepo, c.QuoteItemRepo)

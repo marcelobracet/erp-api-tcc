@@ -82,8 +82,8 @@ func (h *Handler) buildProductListDTO(c *gin.Context, limit, offset int) (*produ
 	}
 	for i, p := range products {
 		resp.Products[i] = &productDomain.ProductDTO{
-			ID:          p.ID,
-			TenantID:    p.TenantID,
+			ID:          p.ID.String(),
+			TenantID:    p.TenantID.String(),
 			Name:        p.Name,
 			Description: p.Description,
 			Price:       p.Price,

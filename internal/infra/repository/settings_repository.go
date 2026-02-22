@@ -4,6 +4,7 @@ import (
 	"context"
 
 	settingsDomain "erp-api/internal/domain/settings"
+	"erp-api/internal/utils/dbtypes"
 
 	"gorm.io/gorm"
 )
@@ -58,7 +59,7 @@ func (r *SettingsRepository) Update(ctx context.Context, req *settingsDomain.Upd
 	// Criar novas configurações
 	for key, value := range req.Settings {
 		setting := &settingsDomain.Settings{
-			TenantID: req.TenantID,
+			TenantID: dbtypes.UUID(req.TenantID),
 			Key:      key,
 			Value:    value,
 		}

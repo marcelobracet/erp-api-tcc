@@ -64,94 +64,6 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
-// Login autentica um usuário
-// @Summary Login de usuário
-// @Description Autentica um usuário e retorna tokens JWT
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param credentials body userDomain.LoginRequest true "Credenciais de login"
-// @Success 200 {object} userDomain.LoginResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /auth/login [post]
-func (h *Handler) Login(c *gin.Context) {
-	var req userDomain.LoginRequest
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	response, err := h.userUseCase.Login(c.Request.Context(), &req)
-	if err != nil {
-		switch err {
-		case userDomain.ErrInvalidCredentials:
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid credentials",
-			})
-		case userDomain.ErrUserInactive:
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "User is inactive",
-			})
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
-// RefreshToken gera um novo access token
-// @Summary Refresh token
-// @Description Gera um novo access token usando refresh token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param refresh body userDomain.RefreshTokenRequest true "Refresh token"
-// @Success 200 {object} userDomain.LoginResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /auth/refresh [post]
-func (h *Handler) RefreshToken(c *gin.Context) {
-	var req userDomain.RefreshTokenRequest
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	response, err := h.userUseCase.RefreshToken(c.Request.Context(), &req)
-	if err != nil {
-		switch err {
-		case userDomain.ErrInvalidToken:
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid refresh token",
-			})
-		case userDomain.ErrUserInactive:
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "User is inactive",
-			})
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
 // GetByID busca um usuário pelo ID
 // @Summary Buscar usuário por ID
 // @Description Busca um usuário específico pelo ID
@@ -206,21 +118,29 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	if err != nil {
 		if err == userDomain.ErrUserNotFound && os.Getenv("AUTH_PROVIDER") == "keycloak" {
 			tenantID, _ := middleware.GetTenantIDFromContext(c)
-			email, _ := middleware.GetUserEmailFromContext(c)
-			role, _ := middleware.GetUserRoleFromContext(c)
-			if role == "" {
-				role = "user"
+			emailValue, hasEmail := middleware.GetUserEmailFromContext(c)
+			var email *string
+			if hasEmail && emailValue != "" {
+				email = &emailValue
 			}
 
-			c.JSON(http.StatusOK, userDomain.User{
-				ID:       userID,
-				TenantID: tenantID,
-				Email:    email,
-				Name:     email,
-				Role:     role,
-				IsActive: true,
+			displayName := userID
+			if email != nil {
+				displayName = *email
+			}
+
+			_, _ = h.userUseCase.Register(c.Request.Context(), &userDomain.CreateUserRequest{
+				TenantID:    tenantID,
+				KeycloakID:  userID,
+				DisplayName: displayName,
+				Email:       email,
 			})
-			return
+
+			user, err = h.userUseCase.GetByID(c.Request.Context(), userID)
+			if err == nil {
+				c.JSON(http.StatusOK, user)
+				return
+			}
 		}
 
 		switch err {

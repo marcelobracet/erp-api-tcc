@@ -5,7 +5,7 @@ import (
 	"time"
 
 	userDomain "erp-api/internal/domain/user"
-
+	"erp-api/internal/utils/dbtypes"
 	"gorm.io/gorm"
 )
 
@@ -33,11 +33,11 @@ const (
 )
 
 type Audit struct {
-	ID string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ID dbtypes.UUID `json:"id" gorm:"primaryKey"`
 
-	TenantID string `json:"tenant_id" gorm:"type:uuid;index;not null"`
+	TenantID dbtypes.UUID `json:"tenant_id" gorm:"index;not null"`
 
-	UserID *string          `json:"user_id,omitempty" gorm:"type:uuid;index"`
+	UserID *dbtypes.UUID    `json:"user_id,omitempty" gorm:"index"`
 	User   *userDomain.User `json:"user,omitempty" gorm:"foreignKey:UserID;references:ID"`
 
 	UserName  string `json:"user_name,omitempty"`
@@ -56,11 +56,18 @@ type Audit struct {
 	UserAgent  string `json:"user_agent,omitempty"`
 	StatusCode int    `json:"status_code,omitempty" gorm:"index"`
 
-	Payload json.RawMessage `json:"payload,omitempty" gorm:"type:jsonb"`
+	Payload json.RawMessage `json:"payload,omitempty" gorm:"type:json"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+func (a *Audit) BeforeCreate(tx *gorm.DB) error {
+	if a.ID == "" {
+		a.ID = dbtypes.NewUUID()
+	}
+	return nil
 }
 
 func (Audit) TableName() string { return "audits" }

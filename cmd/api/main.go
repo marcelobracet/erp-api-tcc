@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"erp-api/infrastructure/ioc"
 	"erp-api/internal/delivery/http/client"
 	"erp-api/internal/delivery/http/product"
 	"erp-api/internal/delivery/http/quote"
@@ -29,13 +30,13 @@ func main() {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	container := container.NewContainer()
-	if err := container.Initialize(); err != nil {
+	appContainer, err := ioc.BuildContainer(context.Background())
+	if err != nil {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}
-	defer container.Close()
+	defer appContainer.Close()
 
-	router := setupRouter(container)
+	router := setupRouter(appContainer)
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
@@ -103,12 +104,6 @@ func setupRouter(container *container.Container) *gin.Engine {
 			tenants.DELETE("/:id", tenant.NewHandler(container.GetTenantUseCase()).Delete)
 			tenants.GET("", tenant.NewHandler(container.GetTenantUseCase()).List)
 			tenants.GET("/count", tenant.NewHandler(container.GetTenantUseCase()).Count)
-		}
-
-		auth := api.Group("/auth")
-		{
-			auth.POST("/login", user.NewHandler(container.GetUserUseCase()).Login)
-			auth.POST("/refresh", user.NewHandler(container.GetUserUseCase()).RefreshToken)
 		}
 
 		users := api.Group("/users")

@@ -5,22 +5,18 @@ import (
 	"time"
 
 	userDomain "erp-api/internal/domain/user"
-	"erp-api/pkg/auth"
+	"erp-api/internal/utils/dbtypes"
 )
 
 // UseCase implementa a lógica de negócio para usuários
 type UseCase struct {
-	userRepo     userDomain.Repository
-	jwtManager   *auth.JWTManager
-	passHasher   *auth.PasswordHasher
+	userRepo userDomain.Repository
 }
 
 // NewUseCase cria uma nova instância do UseCase
-func NewUseCase(userRepo userDomain.Repository, jwtManager *auth.JWTManager, passHasher *auth.PasswordHasher) *UseCase {
+func NewUseCase(userRepo userDomain.Repository) *UseCase {
 	return &UseCase{
-		userRepo:   userRepo,
-		jwtManager: jwtManager,
-		passHasher: passHasher,
+		userRepo: userRepo,
 	}
 }
 
@@ -30,127 +26,27 @@ func (u *UseCase) Register(ctx context.Context, req *userDomain.CreateUserReques
 	if err := req.ValidateCreate(); err != nil {
 		return nil, err
 	}
-	
-	// Verificar se usuário já existe
-	existingUser, err := u.userRepo.GetByEmail(ctx, req.Email)
-	if err != nil && err != userDomain.ErrUserNotFound {
-		return nil, err
-	}
-	
-	if existingUser != nil {
-		return nil, userDomain.ErrUserAlreadyExists
-	}
-	
-	// Hash da senha
-	hashedPassword, err := u.passHasher.HashPassword(req.Password)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Criar usuário com ID gerado automaticamente pelo banco
+
+	// Criar usuário como referência a uma identidade externa (Keycloak)
 	newUser := &userDomain.User{
-		TenantID:  req.TenantID,
-		Email:     req.Email,
-		Password:  hashedPassword,
-		Name:      req.Name,
-		Role:      req.Role,
-		IsActive:  true,
+		TenantID:    dbtypes.UUID(req.TenantID),
+		KeycloakID:  dbtypes.UUID(req.KeycloakID),
+		ID:          dbtypes.UUID(req.KeycloakID),
+		DisplayName: req.DisplayName,
+		Email:       req.Email,
 	}
-	
-	err = u.userRepo.Create(ctx, newUser)
+
+	err := u.userRepo.Create(ctx, newUser)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return newUser, nil
-}
-
-// Login autentica um usuário e retorna tokens
-func (u *UseCase) Login(ctx context.Context, req *userDomain.LoginRequest) (*userDomain.LoginResponse, error) {
-	// Validar request
-	if err := req.ValidateLogin(); err != nil {
-		return nil, err
-	}
-	
-	// Buscar usuário por email
-	user, err := u.userRepo.GetByEmail(ctx, req.Email)
-	if err != nil {
-		if err == userDomain.ErrUserNotFound {
-			return nil, userDomain.ErrInvalidCredentials
-		}
-		return nil, err
-	}
-	
-	// Verificar se usuário está ativo
-	if !user.IsActive {
-		return nil, userDomain.ErrUserInactive
-	}
-	
-	// Verificar senha
-	if !u.passHasher.CheckPassword(req.Password, user.Password) {
-		return nil, userDomain.ErrInvalidCredentials
-	}
-	
-	// Gerar tokens
-	tokenPair, err := u.jwtManager.GenerateTokenPair(user.ID, user.TenantID, user.Email, user.Role)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Atualizar último login
-	err = u.userRepo.UpdateLastLogin(ctx, user.ID)
-	if err != nil {
-		// Log do erro mas não falhar o login
-		// TODO: implementar logger
-	}
-	
-	return &userDomain.LoginResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		User:         *user,
-	}, nil
-}
-
-// RefreshToken gera um novo access token usando refresh token
-func (u *UseCase) RefreshToken(ctx context.Context, req *userDomain.RefreshTokenRequest) (*userDomain.LoginResponse, error) {
-	// Validar refresh token
-	claims, err := u.jwtManager.ValidateToken(req.RefreshToken)
-	if err != nil {
-		return nil, userDomain.ErrInvalidToken
-	}
-	
-	// Buscar usuário
-	user, err := u.userRepo.GetByID(ctx, claims.UserID)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Verificar se usuário está ativo
-	if !user.IsActive {
-		return nil, userDomain.ErrUserInactive
-	}
-	
-	// Gerar novo access token
-	accessToken, err := u.jwtManager.GenerateAccessToken(user.ID, user.TenantID, user.Email, user.Role)
-	if err != nil {
-		return nil, err
-	}
-	
-	return &userDomain.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: req.RefreshToken, // Manter o mesmo refresh token
-		User:         *user,
-	}, nil
 }
 
 // GetByID busca um usuário pelo ID
 func (u *UseCase) GetByID(ctx context.Context, id string) (*userDomain.User, error) {
 	return u.userRepo.GetByID(ctx, id)
-}
-
-// GetByEmail busca um usuário pelo email
-func (u *UseCase) GetByEmail(ctx context.Context, email string) (*userDomain.User, error) {
-	return u.userRepo.GetByEmail(ctx, email)
 }
 
 // Update atualiza um usuário
@@ -162,14 +58,11 @@ func (u *UseCase) Update(ctx context.Context, id string, req *userDomain.UpdateU
 	}
 	
 	// Aplicar atualizações
-	if req.Name != nil {
-		existingUser.Name = *req.Name
+	if req.DisplayName != nil {
+		existingUser.DisplayName = *req.DisplayName
 	}
-	if req.Role != nil {
-		existingUser.Role = *req.Role
-	}
-	if req.IsActive != nil {
-		existingUser.IsActive = *req.IsActive
+	if req.Email != nil {
+		existingUser.Email = req.Email
 	}
 	
 	existingUser.UpdatedAt = time.Now()
@@ -197,8 +90,3 @@ func (u *UseCase) List(ctx context.Context, limit, offset int) ([]*userDomain.Us
 func (u *UseCase) Count(ctx context.Context) (int, error) {
 	return u.userRepo.Count(ctx)
 }
-
-// ValidateToken valida um token JWT e retorna as claims
-func (u *UseCase) ValidateToken(tokenString string) (*auth.Claims, error) {
-	return u.jwtManager.ValidateToken(tokenString)
-} 

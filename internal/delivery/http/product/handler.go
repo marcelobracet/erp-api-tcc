@@ -223,8 +223,8 @@ func (h *Handler) List(c *gin.Context) {
 
 	for i, product := range products {
 		response.Products[i] = &productDomain.ProductDTO{
-			ID:          product.ID,
-			TenantID:    product.TenantID,
+			ID:          product.ID.String(),
+			TenantID:    product.TenantID.String(),
 			Name:        product.Name,
 			Description: product.Description,
 			Price:       product.Price,

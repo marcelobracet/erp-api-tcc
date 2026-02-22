@@ -4,11 +4,15 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"erp-api/internal/utils/dbtypes"
 )
 
 type MockRepository struct {
 	users map[string]*User
 }
+
+func strPtr(s string) *string { return &s }
 
 func NewMockRepository() *MockRepository {
 	return &MockRepository{
@@ -18,11 +22,14 @@ func NewMockRepository() *MockRepository {
 
 func (m *MockRepository) Create(ctx context.Context, user *User) error {
 	if user.ID == "" {
-		user.ID = "user-" + time.Now().Format("20060102150405") + "-" + user.Email
+		user.ID = dbtypes.NewUUID()
+	}
+	if user.KeycloakID == "" {
+		user.KeycloakID = user.ID
 	}
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
-	m.users[user.ID] = user
+	m.users[string(user.ID)] = user
 	return nil
 }
 
@@ -34,21 +41,12 @@ func (m *MockRepository) GetByID(ctx context.Context, id string) (*User, error) 
 	return user, nil
 }
 
-func (m *MockRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
-	for _, user := range m.users {
-		if user.Email == email {
-			return user, nil
-		}
-	}
-	return nil, ErrUserNotFound
-}
-
 func (m *MockRepository) Update(ctx context.Context, user *User) error {
-	if _, exists := m.users[user.ID]; !exists {
+	if _, exists := m.users[string(user.ID)]; !exists {
 		return ErrUserNotFound
 	}
 	user.UpdatedAt = time.Now()
-	m.users[user.ID] = user
+	m.users[string(user.ID)] = user
 	return nil
 }
 
@@ -82,27 +80,15 @@ func (m *MockRepository) Count(ctx context.Context) (int, error) {
 	return len(m.users), nil
 }
 
-func (m *MockRepository) UpdateLastLogin(ctx context.Context, id string) error {
-	user, exists := m.users[id]
-	if !exists {
-		return ErrUserNotFound
-	}
-	now := time.Now()
-	user.LastLoginAt = &now
-	user.UpdatedAt = now
-	return nil
-}
-
 func TestMockRepository_Create(t *testing.T) {
 	repo := NewMockRepository()
 	ctx := context.Background()
 
 	user := &User{
-		Email:    "test@example.com",
-		Password: "hashed_password",
-		Name:     "Test User",
-		Role:     "user",
-		IsActive: true,
+		TenantID:    "tenant-123",
+		KeycloakID:  "kc-123",
+		DisplayName: "Test User",
+		Email:       strPtr("test@example.com"),
 	}
 
 	err := repo.Create(ctx, user)
@@ -112,6 +98,9 @@ func TestMockRepository_Create(t *testing.T) {
 
 	if user.ID == "" {
 		t.Error("Expected user ID to be set")
+	}
+	if user.KeycloakID == "" {
+		t.Error("Expected KeycloakID to be set")
 	}
 
 	if user.CreatedAt.IsZero() {
@@ -128,11 +117,10 @@ func TestMockRepository_GetByID(t *testing.T) {
 	ctx := context.Background()
 
 	user := &User{
-		Email:    "test@example.com",
-		Password: "hashed_password",
-		Name:     "Test User",
-		Role:     "user",
-		IsActive: true,
+		TenantID:    "tenant-123",
+		KeycloakID:  "kc-123",
+		DisplayName: "Test User",
+		Email:       strPtr("test@example.com"),
 	}
 
 	err := repo.Create(ctx, user)
@@ -140,48 +128,15 @@ func TestMockRepository_GetByID(t *testing.T) {
 		t.Fatalf("Failed to create user: %v", err)
 	}
 
-	found, err := repo.GetByID(ctx, user.ID)
+	found, err := repo.GetByID(ctx, string(user.ID))
 	if err != nil {
 		t.Errorf("GetByID() error = %v", err)
 	}
-
-	if found.Email != user.Email {
-		t.Errorf("Expected email %s, got %s", user.Email, found.Email)
+	if string(found.ID) != string(user.ID) {
+		t.Errorf("Expected ID %s, got %s", string(user.ID), string(found.ID))
 	}
 
 	_, err = repo.GetByID(ctx, "non-existent-id")
-	if err != ErrUserNotFound {
-		t.Errorf("Expected ErrUserNotFound, got %v", err)
-	}
-}
-
-func TestMockRepository_GetByEmail(t *testing.T) {
-	repo := NewMockRepository()
-	ctx := context.Background()
-
-	user := &User{
-		Email:    "test@example.com",
-		Password: "hashed_password",
-		Name:     "Test User",
-		Role:     "user",
-		IsActive: true,
-	}
-
-	err := repo.Create(ctx, user)
-	if err != nil {
-		t.Fatalf("Failed to create user: %v", err)
-	}
-
-	found, err := repo.GetByEmail(ctx, user.Email)
-	if err != nil {
-		t.Errorf("GetByEmail() error = %v", err)
-	}
-
-	if found.ID != user.ID {
-		t.Errorf("Expected ID %s, got %s", user.ID, found.ID)
-	}
-
-	_, err = repo.GetByEmail(ctx, "nonexistent@example.com")
 	if err != ErrUserNotFound {
 		t.Errorf("Expected ErrUserNotFound, got %v", err)
 	}
@@ -192,11 +147,10 @@ func TestMockRepository_Update(t *testing.T) {
 	ctx := context.Background()
 
 	user := &User{
-		Email:    "test@example.com",
-		Password: "hashed_password",
-		Name:     "Test User",
-		Role:     "user",
-		IsActive: true,
+		TenantID:    "tenant-123",
+		KeycloakID:  "kc-123",
+		DisplayName: "Test User",
+		Email:       strPtr("test@example.com"),
 	}
 
 	err := repo.Create(ctx, user)
@@ -204,19 +158,19 @@ func TestMockRepository_Update(t *testing.T) {
 		t.Fatalf("Failed to create user: %v", err)
 	}
 
-	user.Name = "Updated User"
+	user.DisplayName = "Updated User"
 	err = repo.Update(ctx, user)
 	if err != nil {
 		t.Errorf("Update() error = %v", err)
 	}
 
-	found, err := repo.GetByID(ctx, user.ID)
+	found, err := repo.GetByID(ctx, string(user.ID))
 	if err != nil {
 		t.Errorf("GetByID() error = %v", err)
 	}
 
-	if found.Name != "Updated User" {
-		t.Errorf("Expected name 'Updated User', got '%s'", found.Name)
+	if found.DisplayName != "Updated User" {
+		t.Errorf("Expected display_name 'Updated User', got '%s'", found.DisplayName)
 	}
 }
 
@@ -225,11 +179,10 @@ func TestMockRepository_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	user := &User{
-		Email:    "test@example.com",
-		Password: "hashed_password",
-		Name:     "Test User",
-		Role:     "user",
-		IsActive: true,
+		TenantID:    "tenant-123",
+		KeycloakID:  "kc-123",
+		DisplayName: "Test User",
+		Email:       strPtr("test@example.com"),
 	}
 
 	err := repo.Create(ctx, user)
@@ -237,12 +190,12 @@ func TestMockRepository_Delete(t *testing.T) {
 		t.Fatalf("Failed to create user: %v", err)
 	}
 
-	err = repo.Delete(ctx, user.ID)
+	err = repo.Delete(ctx, string(user.ID))
 	if err != nil {
 		t.Errorf("Delete() error = %v", err)
 	}
 
-	_, err = repo.GetByID(ctx, user.ID)
+	_, err = repo.GetByID(ctx, string(user.ID))
 	if err != ErrUserNotFound {
 		t.Errorf("Expected ErrUserNotFound after delete, got %v", err)
 	}
@@ -253,9 +206,9 @@ func TestMockRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	users := []*User{
-		{Email: "user1@example.com", Password: "pass1", Name: "User 1", Role: "user"},
-		{Email: "user2@example.com", Password: "pass2", Name: "User 2", Role: "user"},
-		{Email: "user3@example.com", Password: "pass3", Name: "User 3", Role: "user"},
+		{TenantID: "tenant-123", KeycloakID: "kc-1", DisplayName: "User 1", Email: strPtr("user1@example.com")},
+		{TenantID: "tenant-123", KeycloakID: "kc-2", DisplayName: "User 2", Email: strPtr("user2@example.com")},
+		{TenantID: "tenant-123", KeycloakID: "kc-3", DisplayName: "User 3", Email: strPtr("user3@example.com")},
 	}
 
 	for _, user := range users {
@@ -298,8 +251,8 @@ func TestMockRepository_Count(t *testing.T) {
 	ctx := context.Background()
 
 	users := []*User{
-		{Email: "user1@example.com", Password: "pass1", Name: "User 1", Role: "user"},
-		{Email: "user2@example.com", Password: "pass2", Name: "User 2", Role: "user"},
+		{TenantID: "tenant-123", KeycloakID: "kc-1", DisplayName: "User 1", Email: strPtr("user1@example.com")},
+		{TenantID: "tenant-123", KeycloakID: "kc-2", DisplayName: "User 2", Email: strPtr("user2@example.com")},
 	}
 
 	for _, user := range users {
@@ -329,34 +282,4 @@ func TestMockRepository_Count(t *testing.T) {
 	}
 }
 
-func TestMockRepository_UpdateLastLogin(t *testing.T) {
-	repo := NewMockRepository()
-	ctx := context.Background()
 
-	user := &User{
-		Email:    "test@example.com",
-		Password: "hashed_password",
-		Name:     "Test User",
-		Role:     "user",
-		IsActive: true,
-	}
-
-	err := repo.Create(ctx, user)
-	if err != nil {
-		t.Fatalf("Failed to create user: %v", err)
-	}
-
-	err = repo.UpdateLastLogin(ctx, user.ID)
-	if err != nil {
-		t.Errorf("UpdateLastLogin() error = %v", err)
-	}
-
-	found, err := repo.GetByID(ctx, user.ID)
-	if err != nil {
-		t.Errorf("GetByID() error = %v", err)
-	}
-
-	if found.ToDTO().LastLoginAt == "" {
-		t.Error("Expected LastLoginAt to be set")
-	}
-}

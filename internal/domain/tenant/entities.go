@@ -3,6 +3,7 @@ package tenant
 import (
 	"time"
 
+	"erp-api/internal/utils/dbtypes"
 	"gorm.io/gorm"
 )
 
@@ -16,7 +17,7 @@ const (
 )
 
 type Tenant struct {
-	ID string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ID dbtypes.UUID `json:"id" gorm:"primaryKey"`
 
 	// Identidade da empresa
 	CompanyName string `json:"company_name" gorm:"not null"`
@@ -42,4 +43,11 @@ type Tenant struct {
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+func (t *Tenant) BeforeCreate(tx *gorm.DB) error {
+	if t.ID == "" {
+		t.ID = dbtypes.NewUUID()
+	}
+	return nil
 }

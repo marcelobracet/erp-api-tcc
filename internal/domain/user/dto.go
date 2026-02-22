@@ -1,43 +1,25 @@
 package user
 
 type UserDTO struct {
-	ID           string `json:"id"`
-	Email        string `json:"email"`
-	Name         string `json:"name"`
-	Role         string `json:"role"`
-	IsActive     bool   `json:"is_active"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
-	LastLoginAt  string `json:"last_login_at,omitempty"`
+	ID          string  `json:"id"`
+	KeycloakID  string  `json:"keycloak_id"`
+	TenantID    string  `json:"tenant_id"`
+	DisplayName string  `json:"display_name"`
+	Email       *string `json:"email,omitempty"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
 }
 
 type CreateUserDTO struct {
-	TenantID string `json:"tenant_id" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
-	Name     string `json:"name" validate:"required,min=2"`
-	Role     string `json:"role" validate:"required,oneof=admin user manager"`
+	TenantID    string  `json:"tenant_id" validate:"required"`
+	KeycloakID  string  `json:"keycloak_id" validate:"required"`
+	DisplayName string  `json:"display_name" validate:"required,min=2"`
+	Email       *string `json:"email,omitempty" validate:"omitempty,email"`
 }
 
 type UpdateUserDTO struct {
-	Name     *string `json:"name,omitempty" validate:"omitempty,min=2"`
-	Role     *string `json:"role,omitempty" validate:"omitempty,oneof=admin user manager"`
-	IsActive *bool   `json:"is_active,omitempty"`
-}
-
-type LoginDTO struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-type LoginResponseDTO struct {
-	AccessToken  string   `json:"access_token"`
-	RefreshToken string   `json:"refresh_token"`
-	User         UserDTO  `json:"user"`
-}
-
-type RefreshTokenDTO struct {
-	RefreshToken string `json:"refresh_token" validate:"required"`
+	DisplayName *string `json:"display_name,omitempty" validate:"omitempty,min=2"`
+	Email       *string `json:"email,omitempty" validate:"omitempty,email"`
 }
 
 type UserListDTO struct {

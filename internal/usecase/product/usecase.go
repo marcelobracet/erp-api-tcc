@@ -5,6 +5,7 @@ import (
 	"time"
 
 	productDomain "erp-api/internal/domain/product"
+	"erp-api/internal/utils/dbtypes"
 )
 
 type UseCaseInterface interface {
@@ -33,7 +34,7 @@ func (u *UseCase) Create(ctx context.Context, req *productDomain.CreateProductDT
 
 	// Criar produto
 	newProduct := &productDomain.Product{
-		TenantID:    req.TenantID,
+		TenantID:    dbtypes.UUID(req.TenantID),
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,

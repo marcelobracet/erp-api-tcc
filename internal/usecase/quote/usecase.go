@@ -5,6 +5,7 @@ import (
 	"time"
 
 	quoteDomain "erp-api/internal/domain/quote"
+	"erp-api/internal/utils/dbtypes"
 )
 
 type UseCaseInterface interface {
@@ -42,9 +43,9 @@ func (u *UseCase) Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (
 
 	// Criar orçamento
 	newQuote := &quoteDomain.Quote{
-		TenantID:   req.TenantID,
-		ClientID:   req.ClientID,
-		UserID:     req.UserID,
+		TenantID:   dbtypes.UUID(req.TenantID),
+		ClientID:   dbtypes.UUID(req.ClientID),
+		UserID:     dbtypes.UUID(req.UserID),
 		TotalValue: totalValue,
 		Discount:   req.Discount,
 		Status:     quoteDomain.QuoteStatusPending,
@@ -64,9 +65,9 @@ func (u *UseCase) Create(ctx context.Context, req *quoteDomain.CreateQuoteDTO) (
 	// Criar itens do orçamento
 	for _, itemDTO := range req.Items {
 		item := &quoteDomain.QuoteItem{
-			TenantID:  req.TenantID,
+			TenantID:  dbtypes.UUID(req.TenantID),
 			QuoteID:   newQuote.ID,
-			ProductID: itemDTO.ProductID,
+			ProductID: dbtypes.UUID(itemDTO.ProductID),
 			Quantity:  itemDTO.Quantity,
 			UnitPrice: itemDTO.Price,
 		}
@@ -93,10 +94,10 @@ func (u *UseCase) Update(ctx context.Context, tenantID, id string, req *quoteDom
 
 	// Atualizar campos
 	if req.ClientID != "" {
-		quote.ClientID = req.ClientID
+		quote.ClientID = dbtypes.UUID(req.ClientID)
 	}
 	if req.UserID != "" {
-		quote.UserID = req.UserID
+		quote.UserID = dbtypes.UUID(req.UserID)
 	}
 	if req.Discount != nil {
 		quote.Discount = *req.Discount

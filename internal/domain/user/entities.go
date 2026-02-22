@@ -3,48 +3,44 @@ package user
 import (
 	"time"
 
+	"erp-api/internal/utils/dbtypes"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	ID           string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID     string         `json:"tenant_id" gorm:"type:uuid;not null"`
-	Email        string         `json:"email" gorm:"uniqueIndex;not null"`
-	Password     string         `json:"-" gorm:"column:password_hash;not null"`
-	Name         string         `json:"name" gorm:"not null"`
-	Role         string         `json:"role" gorm:"not null;default:'user'"`
-	IsActive     bool           `json:"is_active" gorm:"default:true"`
-	LastLoginAt  *time.Time     `json:"last_login_at,omitempty"`
-	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
+	ID          dbtypes.UUID `json:"id" gorm:"primaryKey"`
+	KeycloakID  dbtypes.UUID `json:"keycloak_id" gorm:"column:keycloak_id;uniqueIndex;not null"`
+	TenantID    dbtypes.UUID `json:"tenant_id" gorm:"not null;index"`
+	DisplayName string       `json:"display_name" gorm:"column:display_name;not null"`
+	Email       *string      `json:"email,omitempty" gorm:"column:email"`
+	CreatedAt   time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time    `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	// In a Keycloak-based setup, the token subject is the stable identity.
+	// Default to using it as our primary key to avoid a mapping layer.
+	if u.ID == "" {
+		if u.KeycloakID != "" {
+			u.ID = u.KeycloakID
+		} else {
+			u.ID = dbtypes.NewUUID()
+		}
+	}
+	if u.KeycloakID == "" {
+		u.KeycloakID = u.ID
+	}
+	return nil
 }
 
 type CreateUserRequest struct {
-	TenantID string `json:"tenant_id" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
-	Name     string `json:"name" validate:"required,min=2"`
-	Role     string `json:"role" validate:"required,oneof=admin user manager"`
+	TenantID    string  `json:"tenant_id" validate:"required"`
+	KeycloakID  string  `json:"keycloak_id" validate:"required"`
+	DisplayName string  `json:"display_name" validate:"required,min=2"`
+	Email       *string `json:"email,omitempty" validate:"omitempty,email"`
 }
 
 type UpdateUserRequest struct {
-	Name     *string `json:"name,omitempty" validate:"omitempty,min=2"`
-	Role     *string `json:"role,omitempty" validate:"omitempty,oneof=admin user manager"`
-	IsActive *bool   `json:"is_active,omitempty"`
+	DisplayName *string `json:"display_name,omitempty" validate:"omitempty,min=2"`
+	Email       *string `json:"email,omitempty" validate:"omitempty,email"`
 }
-
-type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	User         User   `json:"user"`
-}
-
-type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required"`
-} 

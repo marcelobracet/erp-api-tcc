@@ -2,6 +2,9 @@ package quote
 
 import (
 	"time"
+
+	"erp-api/internal/utils/dbtypes"
+	"gorm.io/gorm"
 )
 
 type QuoteStatus string
@@ -14,10 +17,10 @@ const (
 )
 
 type Quote struct {
-	ID       string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID string `json:"tenant_id" gorm:"type:uuid;not null;index"`
-	ClientID string `json:"client_id" gorm:"type:uuid;not null;index"`
-	UserID   string `json:"user_id" gorm:"type:uuid;not null;index"`
+	ID       dbtypes.UUID `json:"id" gorm:"primaryKey"`
+	TenantID dbtypes.UUID `json:"tenant_id" gorm:"not null;index"`
+	ClientID dbtypes.UUID `json:"client_id" gorm:"not null;index"`
+	UserID   dbtypes.UUID `json:"user_id" gorm:"not null;index"`
 
 	Subtotal   float64 `json:"subtotal"`
 	Discount   float64 `json:"discount"`
@@ -32,11 +35,18 @@ type Quote struct {
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
+func (q *Quote) BeforeCreate(tx *gorm.DB) error {
+	if q.ID == "" {
+		q.ID = dbtypes.NewUUID()
+	}
+	return nil
+}
+
 type QuoteItem struct {
-	ID        string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID  string `json:"tenant_id" gorm:"type:uuid;not null"`
-	QuoteID   string `json:"quote_id" gorm:"type:uuid;not null"`
-	ProductID string `json:"product_id" gorm:"type:uuid;not null"`
+	ID        dbtypes.UUID `json:"id" gorm:"primaryKey"`
+	TenantID  dbtypes.UUID `json:"tenant_id" gorm:"not null"`
+	QuoteID   dbtypes.UUID `json:"quote_id" gorm:"not null"`
+	ProductID dbtypes.UUID `json:"product_id" gorm:"not null"`
 
 	// Medidas
 	WidthCM   float64 `json:"width_cm,omitempty"`  // largura
@@ -57,4 +67,11 @@ type QuoteItem struct {
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+func (qi *QuoteItem) BeforeCreate(tx *gorm.DB) error {
+	if qi.ID == "" {
+		qi.ID = dbtypes.NewUUID()
+	}
+	return nil
 }

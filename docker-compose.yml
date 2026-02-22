@@ -3,23 +3,25 @@ services:
     build: .
     ports:
       - "8080:8080"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=erp_user
-      - DB_PASSWORD=erp_password
-      - DB_NAME=erp_db
-      - DB_SSLMODE=disable
-      - AUTH_DISABLED=true
-      - JWT_SECRET=your-super-secret-jwt-key-here
-      - JWT_EXPIRATION=24h
-      - JWT_REFRESH_EXPIRATION=168h
-      - SERVER_PORT=8080
-      - SERVER_HOST=0.0.0.0
-      - LOG_LEVEL=info
-      # Billing / Plano único + free trial
-      - TENANT_DEFAULT_PLAN=free
-      - TENANT_FREE_TRIAL_DAYS=14
+    # environment:
+    #   - DB_HOST=postgres
+    #   - DB_PORT=5432
+    #   - DB_USER=erp_user
+    #   - DB_PASSWORD=erp_password
+    #   - DB_NAME=erp_db
+    #   - DB_SSLMODE=disable
+    #   - AUTH_DISABLED=true
+    #   - JWT_SECRET=your-super-secret-jwt-key-here
+    #   - JWT_EXPIRATION=24h
+    #   - JWT_REFRESH_EXPIRATION=168h
+    #   - SERVER_PORT=8080
+    #   - SERVER_HOST=0.0.0.0
+    #   - LOG_LEVEL=info
+    #   # Billing / Plano único + free trial
+    #   - TENANT_DEFAULT_PLAN=free
+    #   - TENANT_FREE_TRIAL_DAYS=14
+    env_file:
+      - ./infrastructure/env/app.env
     depends_on:
       - postgres
     networks:
@@ -28,35 +30,57 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.1.0
     command: ["start-dev", "--http-port=8080", "--import-realm"]
-    environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      # (Opcional) Importa automaticamente um realm se existir em ./infrastructure/keycloak
+    # environment:
+    #   - KEYCLOAK_ADMIN=admin
+    #   - KEYCLOAK_ADMIN_PASSWORD=admin
+    #   - KC_DB=postgres
+    #   - KC_DB_URL=jdbc:postgresql://postgres:5432/erp_db
+    #   - KC_DB_USERNAME=erp_user
+    #   - KC_DB_PASSWORD=erp_password
+    # (Opcional) Importa automaticamente um realm se existir em ./infrastructure/keycloak
     ports:
       - "8081:8080"
+    env_file:
+      - ./infrastructure/env/keycloak.env
     volumes:
       - ./infrastructure/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - erp-network
 
   postgres:
     image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=erp_user
-      - POSTGRES_PASSWORD=erp_password
-      - POSTGRES_DB=erp_db
+    # environment:
+    #   - POSTGRES_USER=erp_user
+    #   - POSTGRES_PASSWORD=erp_password
+    #   - POSTGRES_DB=erp_db
+    env_file:
+      - ./infrastructure/env/postgres.env
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - erp-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@erp.com
-      - PGADMIN_DEFAULT_PASSWORD=admin123
+    # environment:
+    #   - PGADMIN_DEFAULT_EMAIL=admin@erp.com
+    #   - PGADMIN_DEFAULT_PASSWORD=admin123
+    env_file:
+      - ./infrastructure/env/pgadmin.env
     ports:
       - "5050:80"
     depends_on:

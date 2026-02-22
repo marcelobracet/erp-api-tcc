@@ -228,10 +228,10 @@ func (h *Handler) List(c *gin.Context) {
 
 	for i, quote := range quotes {
 		response.Quotes[i] = &quoteDomain.QuoteDTO{
-			ID:         quote.ID,
-			TenantID:   quote.TenantID,
-			ClientID:   quote.ClientID,
-			UserID:     quote.UserID,
+			ID:         quote.ID.String(),
+			TenantID:   quote.TenantID.String(),
+			ClientID:   quote.ClientID.String(),
+			UserID:     quote.UserID.String(),
 			TotalValue: quote.TotalValue,
 			Discount:   quote.Discount,
 			Status:     quote.Status,

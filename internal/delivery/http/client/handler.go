@@ -234,7 +234,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	for i, client := range clients {
 		response.Clients[i] = &clientDomain.ClientDTO{
-			ID:           client.ID,
+			ID:           client.ID.String(),
 			Name:         client.Name,
 			Email:        client.Email,
 			Phone:        client.Phone,

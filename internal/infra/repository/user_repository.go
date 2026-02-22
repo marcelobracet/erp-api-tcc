@@ -42,20 +42,6 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*userDomain.Us
 	return &user, nil
 }
 
-func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*userDomain.User, error) {
-	var user userDomain.User
-	
-	result := r.db.WithContext(ctx).Where("email = ?", email).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, userDomain.ErrUserNotFound
-		}
-		return nil, result.Error
-	}
-	
-	return &user, nil
-}
-
 func (r *UserRepository) Update(ctx context.Context, user *userDomain.User) error {
 	result := r.db.WithContext(ctx).Save(user)
 	if result.Error != nil {
@@ -108,20 +94,3 @@ func (r *UserRepository) Count(ctx context.Context) (int, error) {
 	
 	return int(count), nil
 }
-
-func (r *UserRepository) UpdateLastLogin(ctx context.Context, id string) error {
-	result := r.db.WithContext(ctx).
-		Model(&userDomain.User{}).
-		Where("id = ?", id).
-		Update("last_login_at", gorm.Expr("NOW()"))
-	
-	if result.Error != nil {
-		return result.Error
-	}
-	
-	if result.RowsAffected == 0 {
-		return userDomain.ErrUserNotFound
-	}
-	
-	return nil
-} 

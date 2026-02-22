@@ -15,29 +15,30 @@ import (
 	"gorm.io/gorm"
 )
 
-// PostgreSQLFactory implements RepositoryFactory for PostgreSQL using GORM
-type PostgreSQLFactory struct {
+// MySQLFactory implements RepositoryFactory for MySQL using GORM.
+//
+// Note: if your repositories are GORM-portable (no Postgres-specific SQL),
+// this factory can reuse the same repository implementations.
+type MySQLFactory struct {
 	db database.Database
 }
 
-// NewPostgreSQLFactory creates a new PostgreSQL repository factory
-func NewPostgreSQLFactory(db database.Database) (database.RepositoryFactory, error) {
+// NewMySQLFactory creates a new MySQL repository factory.
+func NewMySQLFactory(db database.Database) (database.RepositoryFactory, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database cannot be nil")
 	}
 
-	return &PostgreSQLFactory{
-		db: db,
-	}, nil
+	return &MySQLFactory{db: db}, nil
 }
 
-// GetDatabase returns the underlying database instance
-func (f *PostgreSQLFactory) GetDatabase() database.Database {
+// GetDatabase returns the underlying database instance.
+func (f *MySQLFactory) GetDatabase() database.Database {
 	return f.db
 }
 
-// getGormDB extracts the GORM DB instance from the Database interface
-func (f *PostgreSQLFactory) getGormDB() (*gorm.DB, error) {
+// getGormDB extracts the GORM DB instance from the Database interface.
+func (f *MySQLFactory) getGormDB() (*gorm.DB, error) {
 	dbInstance := f.db.GetDB()
 	if dbInstance == nil {
 		return nil, fmt.Errorf("database instance is nil")
@@ -51,17 +52,17 @@ func (f *PostgreSQLFactory) getGormDB() (*gorm.DB, error) {
 	return gormDB, nil
 }
 
-func (f *PostgreSQLFactory) CreateTenantRepository() tenantDomain.Repository {
+// CreateTenantRepository creates a tenant repository.
+func (f *MySQLFactory) CreateTenantRepository() tenantDomain.Repository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
-		// In a production system, you might want to handle this differently
-		// For now, we'll panic as this indicates a configuration error
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
 	}
 	return repository.NewTenantRepository(gormDB)
 }
 
-func (f *PostgreSQLFactory) CreateUserRepository() userDomain.Repository {
+// CreateUserRepository creates a user repository.
+func (f *MySQLFactory) CreateUserRepository() userDomain.Repository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
@@ -69,7 +70,8 @@ func (f *PostgreSQLFactory) CreateUserRepository() userDomain.Repository {
 	return repository.NewUserRepository(gormDB)
 }
 
-func (f *PostgreSQLFactory) CreateClientRepository() clientDomain.Repository {
+// CreateClientRepository creates a client repository.
+func (f *MySQLFactory) CreateClientRepository() clientDomain.Repository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
@@ -77,8 +79,8 @@ func (f *PostgreSQLFactory) CreateClientRepository() clientDomain.Repository {
 	return repository.NewClientRepository(gormDB)
 }
 
-// CreateProductRepository creates a product repository
-func (f *PostgreSQLFactory) CreateProductRepository() productDomain.Repository {
+// CreateProductRepository creates a product repository.
+func (f *MySQLFactory) CreateProductRepository() productDomain.Repository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
@@ -86,8 +88,8 @@ func (f *PostgreSQLFactory) CreateProductRepository() productDomain.Repository {
 	return repository.NewProductRepository(gormDB)
 }
 
-// CreateQuoteRepository creates a quote repository
-func (f *PostgreSQLFactory) CreateQuoteRepository() quoteDomain.Repository {
+// CreateQuoteRepository creates a quote repository.
+func (f *MySQLFactory) CreateQuoteRepository() quoteDomain.Repository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
@@ -95,8 +97,8 @@ func (f *PostgreSQLFactory) CreateQuoteRepository() quoteDomain.Repository {
 	return repository.NewQuoteRepository(gormDB)
 }
 
-// CreateQuoteItemRepository creates a quote item repository
-func (f *PostgreSQLFactory) CreateQuoteItemRepository() quoteDomain.ItemRepository {
+// CreateQuoteItemRepository creates a quote item repository.
+func (f *MySQLFactory) CreateQuoteItemRepository() quoteDomain.ItemRepository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
@@ -104,13 +106,11 @@ func (f *PostgreSQLFactory) CreateQuoteItemRepository() quoteDomain.ItemReposito
 	return repository.NewQuoteItemRepository(gormDB)
 }
 
-// CreateSettingsRepository creates a settings repository
-func (f *PostgreSQLFactory) CreateSettingsRepository() settingsDomain.Repository {
+// CreateSettingsRepository creates a settings repository.
+func (f *MySQLFactory) CreateSettingsRepository() settingsDomain.Repository {
 	gormDB, err := f.getGormDB()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get GORM DB: %v", err))
 	}
 	return repository.NewSettingsRepository(gormDB)
 }
-
-

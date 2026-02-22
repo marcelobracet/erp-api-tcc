@@ -3,12 +3,13 @@ package client
 import (
 	"time"
 
+	"erp-api/internal/utils/dbtypes"
 	"gorm.io/gorm"
 )
 
 type Client struct {
-	ID           string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID     string         `json:"tenant_id" gorm:"type:uuid;not null"`
+	ID           dbtypes.UUID   `json:"id" gorm:"primaryKey"`
+	TenantID     dbtypes.UUID   `json:"tenant_id" gorm:"not null"`
 	Name         string         `json:"name" gorm:"not null"`
 	Email        string         `json:"email,omitempty"`
 	Phone        string         `json:"phone,omitempty"`
@@ -23,3 +24,10 @@ type Client struct {
 	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 } 
+
+func (c *Client) BeforeCreate(tx *gorm.DB) error {
+	if c.ID == "" {
+		c.ID = dbtypes.NewUUID()
+	}
+	return nil
+}

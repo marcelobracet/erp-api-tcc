@@ -22,18 +22,18 @@ Opcional (roles por client): defina `KEYCLOAK_CLIENT_ID` e crie Client Roles no 
 
 ## 3) API - variáveis de ambiente
 - `AUTH_PROVIDER=keycloak`
-- `KEYCLOAK_ISSUER=http://localhost:8081/realms/erp`
+- `KEYCLOAK_ISSUER=http://localhost:8081/realms/onmarmoraria`
 - `KEYCLOAK_AUDIENCE=erp-frontend` (ou outro audience aceito)
 - `KEYCLOAK_CLIENT_ID=erp-frontend` (se for ler client roles em `resource_access`)
 
 ### Dica importante (Docker x Issuer)
 O middleware valida o token comparando o claim `iss` com `KEYCLOAK_ISSUER`.
 
-- Se você **rodar a API no host** (ex: `go run ./cmd/api`), use `KEYCLOAK_ISSUER=http://localhost:8081/realms/erp`.
-- Se você **rodar a API no Docker**, normalmente você quer manter `KEYCLOAK_ISSUER` como `http://localhost:8081/realms/erp` (pra bater com o token emitido no navegador), mas o container não consegue resolver `localhost` do host.
+- Se você **rodar a API no host** (ex: `go run ./cmd/api`), use `KEYCLOAK_ISSUER=http://localhost:8081/realms/onmarmoraria`.
+- Se você **rodar a API no Docker**, normalmente você quer manter `KEYCLOAK_ISSUER` como `http://localhost:8081/realms/onmarmoraria` (pra bater com o token emitido no navegador), mas o container não consegue resolver `localhost` do host.
 
 Para esse cenário, você pode configurar também:
-- `KEYCLOAK_JWKS_URL=http://keycloak:8080/realms/erp/protocol/openid-connect/certs`
+- `KEYCLOAK_JWKS_URL=http://keycloak:8080/realms/onmarmoraria/protocol/openid-connect/certs`
 
 Assim o container busca as chaves no endereço interno do compose (`keycloak:8080`), mas continua validando `iss` como `localhost:8081`.
 

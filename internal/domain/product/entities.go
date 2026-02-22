@@ -3,12 +3,13 @@ package product
 import (
 	"time"
 
+	"erp-api/internal/utils/dbtypes"
 	"gorm.io/gorm"
 )
 
 type Product struct {
-	ID          string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TenantID    string         `json:"tenant_id" gorm:"type:uuid;not null"`
+	ID          dbtypes.UUID   `json:"id" gorm:"primaryKey"`
+	TenantID    dbtypes.UUID   `json:"tenant_id" gorm:"not null"`
 	Name        string         `json:"name" gorm:"not null"`
 	Description string         `json:"description,omitempty"`
 	Price       float64        `json:"price" gorm:"not null"`
@@ -21,4 +22,11 @@ type Product struct {
 	CreatedAt   time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+func (p *Product) BeforeCreate(tx *gorm.DB) error {
+	if p.ID == "" {
+		p.ID = dbtypes.NewUUID()
+	}
+	return nil
 }
